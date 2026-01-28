@@ -16,7 +16,12 @@
       "Bash(uvicorn:*)",
       "Bash(git remote set-url:*)",
       "Bash(git rm:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "WebFetch(domain:escrow-assistant.onrender.com)",
+      "Bash(..venvScriptspython.exe evals/run_eval.py)",
+      "Bash(del \"D:\\\\OneDrive\\\\AI Product Playbook\\\\escrow-assistant\\\\evals\\\\eval_results.json\" \"D:\\\\OneDrive\\\\AI Product Playbook\\\\escrow-assistant\\\\evals\\\\eval_report.md\")"
     ]
   }
 }
