@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Escrow Assistant Widget - Freedom Mortgage</title>
+  <title>Escrow Assistant</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;900&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
@@ -226,8 +226,8 @@
             <path d="M15 35 L15 22 L25 22 L25 35" fill="#00273A"/>
           </svg>
           <div class="flex flex-col">
-            <span class="text-xs tracking-widest font-light opacity-90">FREEDOM</span>
-            <span class="text-sm font-semibold -mt-1">MORTGAGE</span>
+            <span class="text-xs tracking-widest font-light opacity-90">MORTGAGE</span>
+            <span class="text-sm font-semibold -mt-1">PORTAL</span>
           </div>
         </div>
 
@@ -355,7 +355,7 @@
             <ul class="text-paragraph text-neutral-600 space-y-2 mb-6">
               <li class="flex gap-2">
                 <span class="text-fm-primary">•</span>
-                <span>If you are enrolled in Freedom Mortgage recurring payments, your new payment amount will update automatically.</span>
+                <span>If you are enrolled in recurring payments with your servicer, your new payment amount will update automatically.</span>
               </li>
               <li class="flex gap-2">
                 <span class="text-fm-primary">•</span>
@@ -384,7 +384,7 @@
               <div class="flex-shrink-0 h-6 w-6 rounded-full bg-fm-secondary flex items-center justify-center">
                 <i data-lucide="info" class="h-3.5 w-3.5 text-white"></i>
               </div>
-              <p class="text-neutral-600 text-sm">Freedom Mortgage does not set these amounts. We act on your behalf to pay these obligations. Please contact your local tax authority or insurance company with questions about these amounts.</p>
+              <p class="text-neutral-600 text-sm">Your mortgage servicer does not set these amounts. We act on your behalf to pay these obligations. Please contact your local tax authority or insurance company with questions about these amounts.</p>
             </div>
           </div>
 
@@ -417,7 +417,7 @@
               <!-- FAQ 3 -->
               <div class="faq-item border border-neutral-200 rounded overflow-hidden">
                 <button onclick="toggleFaq(this)" class="w-full p-3 flex justify-between items-center cursor-pointer hover:bg-neutral-50 text-left">
-                  <span class="text-sm font-medium">Do I need to do anything if I'm enrolled in automatic payments with Freedom Mortgage?</span>
+                  <span class="text-sm font-medium">Do I need to do anything if I'm enrolled in automatic payments with my servicer?</span>
                   <i data-lucide="plus" class="faq-icon h-4 w-4 text-neutral-400 flex-shrink-0 transition-transform"></i>
                 </button>
                 <div class="faq-answer hidden px-3 pb-3 bg-fm-row-alt rounded-b">
@@ -478,7 +478,7 @@
       <!-- Footer -->
       <footer class="bg-fm-secondary text-white px-6 py-4 rounded-b-lg text-caption">
         <div class="flex justify-between items-center">
-          <span>&copy; 2026 Freedom Mortgage Corporation</span>
+          <span>&copy; 2026 Escrow Assistant Demo</span>
           <div class="flex gap-4">
             <a href="#" class="hover:underline">Privacy</a>
             <a href="#" class="hover:underline">Terms</a>
@@ -610,7 +610,7 @@
           </button>
         </form>
         <p class="mt-2 text-caption text-neutral-400 text-center">
-          General info only. <a href="tel:1-800-220-3000" class="text-fm-link hover:underline">Contact Care</a> for account details.
+          General info only. <a href="#" class="text-fm-link hover:underline">Contact Care</a> for account details.
         </p>
       </div>
 
@@ -640,7 +640,7 @@
     // Client-side FAQ cache - instant answers without API calls
     const FAQ_CACHE = {
       "What is an escrow shortage?": {
-        answer: "Your escrow account exists to pay escrowed items (taxes, insurance, mortgage insurance, etc.) as they come due. **A shortage occurs when the analysis shows that the minimum required balance falls below the amount needed to make projected payments.**\n\nShortages are commonly caused by:\n- Increases in property taxes or insurance premiums\n- Changing your insurance carrier off-cycle\n- Underestimated taxes when you closed your loan\n\nFreedom Mortgage performs a regular analysis of your escrow account to ensure enough funds are available. If a shortage is identified, you'll receive an escrow analysis statement explaining your options.",
+        answer: "Your escrow account exists to pay escrowed items (taxes, insurance, mortgage insurance, etc.) as they come due. **A shortage occurs when the analysis shows that the minimum required balance falls below the amount needed to make projected payments.**\n\nShortages are commonly caused by:\n- Increases in property taxes or insurance premiums\n- Changing your insurance carrier off-cycle\n- Underestimated taxes when you closed your loan\n\nA regular analysis of your escrow account is performed to ensure enough funds are available. If a shortage is identified, you'll receive an escrow analysis statement explaining your options.",
         sources: ["Shortage (FAQ-1)"]
       },
       "Why did my payment change?": {
@@ -965,7 +965,7 @@
 
       } catch (err) {
         removeTypingIndicator();
-        addMessage("I'm sorry, something went wrong. Please try again or call 1-800-220-3000.", false);
+        addMessage("I'm sorry, something went wrong. Please try again or contact Customer Care.", false);
         console.error('Error:', err);
       } finally {
         // Re-enable form

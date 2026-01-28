@@ -1,6 +1,6 @@
 # Escrow Assistant
 
-AI-powered escrow assistant for Freedom Mortgage customers. Provides a chat interface to answer questions about escrow accounts, shortages, surpluses, and payment changes using RAG (Retrieval-Augmented Generation).
+AI-powered escrow assistant. Provides a chat interface to answer questions about escrow accounts, shortages, surpluses, and payment changes using RAG (Retrieval-Augmented Generation).
 
 ## Quick Start
 
@@ -54,7 +54,7 @@ frontend/
   - API endpoints: `/ask`, `/feedback`, `/health`
   - System prompt and conversation history handling
 
-- `frontend/index.html` - Freedom Mortgage branded UI with:
+- `frontend/index.html` - Escrow analysis UI with:
   - Escrow analysis dashboard (sample data)
   - Floating chat widget with quick question buttons
   - Client-side FAQ cache for instant responses

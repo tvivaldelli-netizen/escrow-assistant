@@ -36,7 +36,7 @@
   },
   {
     "id": 6,
-    "question": "I paid my insurance myself and now Freedom Mortgage also paid it. What do I do?",
+    "question": "I paid my insurance myself and now my servicer also paid it. What do I do?",
     "expected_faq": "faq_7",
     "category": "faq_coverage",
     "topic": "insurance_refund"
@@ -379,14 +379,14 @@
   },
   {
     "id": 55,
-    "question": "I'm enrolled in Freedom Mortgage auto-pay. Will my payment update automatically?",
+    "question": "I'm enrolled in my servicer's auto-pay. Will my payment update automatically?",
     "expected_faq": "faq_20",
     "category": "faq_coverage",
     "topic": "autopay_adjustment"
   },
   {
     "id": 56,
-    "question": "Do I need to do anything if I have automatic payments set up with Freedom?",
+    "question": "Do I need to do anything if I have automatic payments set up with my servicer?",
     "expected_faq": "faq_20",
     "category": "faq_coverage",
     "topic": "autopay_adjustment"

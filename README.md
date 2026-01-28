@@ -1,6 +1,6 @@
 # Escrow Assistant
 
-A **production-ready AI-powered escrow assistant** for Freedom Mortgage. This application provides an intelligent chat interface to help customers understand their escrow accounts, shortages, surpluses, and payment changes.
+A **production-ready AI-powered escrow assistant**. This application provides an intelligent chat interface to help customers understand their escrow accounts, shortages, surpluses, and payment changes.
 
 ## Features
 
@@ -8,7 +8,7 @@ A **production-ready AI-powered escrow assistant** for Freedom Mortgage. This ap
 - 🔍 **RAG (Retrieval-Augmented Generation)**: Vector search over curated FAQ knowledge base
 - 📊 **Escrow Analysis Dashboard**: Visual display of payment details and shortages
 - 📱 **Responsive Design**: Works on desktop and mobile devices
-- 🎨 **Freedom Mortgage Brand**: Follows FM design system and typography
+- 🎨 **Clean Design**: Follows a clean design system and typography
 
 ## Architecture
 
