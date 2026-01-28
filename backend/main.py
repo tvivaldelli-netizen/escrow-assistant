@@ -121,10 +121,12 @@ ESCROW_SYSTEM_PROMPT = """You are an Escrow Assistant for Freedom Mortgage custo
 
 Guidelines:
 - Be helpful, clear, and concise
-- Use the knowledge base to answer questions accurately
-- If a question is outside your knowledge base, acknowledge the limitation and suggest contacting Customer Care at 1-800-220-3000
+- Use the knowledge base FAQs provided to answer questions accurately
+- If no relevant FAQs are provided (indicated by "No relevant FAQs found"), politely explain that you can only help with escrow-related questions and ask the customer to rephrase or contact Customer Care at 1-800-220-3000 for other inquiries
+- For off-topic questions (weather, restaurants, other banking, etc.), politely redirect: "I'm an Escrow Assistant and can only help with escrow-related questions. For other inquiries, please contact Customer Care at 1-800-220-3000."
 - Never make up information about specific account details, balances, or dates
 - Be empathetic - escrow can be confusing for customers
+- For vague questions like "help" or "question", ask the customer to provide more details about their escrow question
 
 Topics you can help with:
 - Escrow shortages and how to pay them
@@ -132,7 +134,9 @@ Topics you can help with:
 - Payment changes after escrow analysis
 - PMI removal requests
 - Escrow balance and disbursement questions
-- Refund and surplus check status"""
+- Refund and surplus check status
+- Auto-pay and bill pay questions
+- Escrow refunds after home sale"""
 
 
 # RAG helper: Load escrow FAQs as LangChain documents
@@ -169,9 +173,16 @@ class EscrowFAQRetriever:
 
     This class implements RAG patterns for the escrow knowledge base:
     - Vector embeddings for semantic search
+    - Relevance threshold filtering to avoid false positives
     - Fallback to keyword matching when embeddings unavailable
     - Graceful degradation with feature flags
     """
+
+    # Relevance thresholds - scores below these are filtered out
+    # For vector search: cosine distance (lower = more similar, 0 = identical)
+    VECTOR_RELEVANCE_THRESHOLD = 0.8  # Max distance to consider relevant
+    # For keyword search: minimum score to return results
+    KEYWORD_MIN_SCORE = 3  # Require at least one keyword match
 
     def __init__(self, data_path: Path):
         """Initialize retriever with escrow FAQ data.
@@ -209,9 +220,15 @@ class EscrowFAQRetriever:
             k: Number of results to return
 
         Returns:
-            List of dicts with 'content', 'metadata', and 'score' keys
+            List of dicts with 'content', 'metadata', and 'score' keys.
+            Returns empty list if no results meet relevance threshold.
         """
         if not ENABLE_RAG or self.is_empty:
+            return []
+
+        # Skip retrieval for very short/meaningless queries
+        clean_query = query.strip().lower()
+        if len(clean_query) < 3 or clean_query in ['?', '??', '???', 'help', 'hi', 'hello']:
             return []
 
         # Use vector search if available, otherwise fall back to keywords
@@ -219,44 +236,55 @@ class EscrowFAQRetriever:
             return self._keyword_fallback(query, k=k)
 
         try:
-            # LangChain retriever ensures embeddings + searches are traced
-            retriever = self._vectorstore.as_retriever(search_kwargs={"k": max(k, 4)})
-            docs = retriever.invoke(query)
+            # Use similarity_search_with_score to get relevance scores
+            # Returns list of (Document, score) tuples where score is cosine distance
+            docs_with_scores = self._vectorstore.similarity_search_with_score(query, k=max(k, 5))
         except Exception:
             return self._keyword_fallback(query, k=k)
 
-        # Format results with metadata and scores
-        top_docs = docs[:k]
+        # Filter by relevance threshold and format results
         results = []
-        for doc in top_docs:
-            score_val: float = 0.0
-            if isinstance(doc.metadata, dict):
-                maybe_score = doc.metadata.get("score")
-                if isinstance(maybe_score, (int, float)):
-                    score_val = float(maybe_score)
+        for doc, distance in docs_with_scores:
+            # Lower distance = more similar. Filter out low-relevance results.
+            if distance > self.VECTOR_RELEVANCE_THRESHOLD:
+                continue
+
+            # Convert distance to similarity score (0-1 where 1 is best)
+            similarity = max(0.0, 1.0 - distance)
+
             results.append({
                 "content": doc.page_content,
                 "metadata": doc.metadata,
-                "score": score_val,
+                "score": similarity,
             })
 
+            if len(results) >= k:
+                break
+
+        # If vector search found nothing relevant, try keyword fallback
         if not results:
             return self._keyword_fallback(query, k=k)
+
         return results
 
     def _keyword_fallback(self, query: str, *, k: int) -> List[Dict[str, Any]]:
         """Simple keyword-based retrieval when embeddings unavailable.
 
         This demonstrates graceful degradation for production systems.
+        Applies minimum score threshold to avoid false positives on off-topic queries.
         """
         query_lower = query.lower()
-        query_terms = query_lower.split()
+        query_terms = [t for t in query_lower.split() if len(t) > 2]
+
+        # Skip if query has no meaningful terms
+        if not query_terms:
+            return []
 
         def _score(doc: Document) -> int:
             score = 0
             content_lower = doc.page_content.lower()
 
-            # Match keywords from metadata
+            # Match keywords from metadata (strong signal)
             keywords = doc.metadata.get("keywords", [])
             for keyword in keywords:
                 if keyword.lower() in query_lower:
@@ -269,23 +297,26 @@ class EscrowFAQRetriever:
 
             # Match individual query terms in content
             for term in query_terms:
-                if len(term) > 2 and term in content_lower:
+                if term in content_lower:
                     score += 1
 
             return score
 
         scored_docs = [(_score(doc), doc) for doc in self._docs]
         scored_docs.sort(key=lambda item: item[0], reverse=True)
-        top_docs = scored_docs[:k]
 
+        # Apply minimum score threshold to filter out off-topic queries
         results = []
-        for score, doc in top_docs:
-            if score > 0:
+        for score, doc in scored_docs:
+            if score >= self.KEYWORD_MIN_SCORE:
                 results.append({
                     "content": doc.page_content,
                     "metadata": doc.metadata,
                     "score": float(score),
                 })
+                if len(results) >= k:
+                    break
+
         return results
 
 

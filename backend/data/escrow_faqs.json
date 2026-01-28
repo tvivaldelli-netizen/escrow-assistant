@@ -4,132 +4,160 @@
     "category": "Shortage",
     "question": "What is a shortage, and why might I have one?",
     "answer": "Your escrow account exists to pay escrowed items like property taxes and homeowners insurance on your behalf. A shortage occurs when your escrow account doesn't have enough funds to cover these payments. This can happen if your property taxes increased, your insurance premium went up, or there was an unexpected expense. After each annual escrow analysis, we calculate whether your account has enough to cover upcoming bills plus a required cushion, and if not, you'll see a shortage.",
-    "keywords": ["shortage", "taxes", "insurance", "analysis", "escrow account", "increase"]
+    "keywords": ["shortage", "what is shortage", "why shortage", "escrow shortage", "shortage meaning", "define shortage"]
   },
   {
     "id": "faq_2",
     "category": "Shortage",
-    "question": "How do I pay my shortage in full?",
-    "answer": "You can pay your shortage in full by sending a one-time payment to Freedom Mortgage. You can pay online through your account at FreedomMortgage.com, by phone, or by mail. When making the payment, be sure to note it is for 'escrow shortage' so it is applied correctly. Paying in full will prevent your monthly payment from increasing to cover the shortage over time.",
-    "keywords": ["pay shortage", "full payment", "one-time", "escrow shortage", "lump sum"]
+    "question": "How do I pay my shortage in full as a lump sum?",
+    "answer": "You can pay your shortage in full by sending a one-time lump sum payment to Freedom Mortgage. You can pay online through your account at FreedomMortgage.com, by phone, or by mail. When making the payment, be sure to note it is for 'escrow shortage' so it is applied correctly. Paying in full will prevent your monthly payment from increasing to cover the shortage over time. Note: Even if you pay the shortage in full, your monthly escrow payment may still increase if your taxes or insurance went up.",
+    "keywords": ["pay shortage", "full payment", "one-time", "lump sum", "pay in full", "shortage payment"]
   },
   {
     "id": "faq_3",
     "category": "Shortage",
-    "question": "Can I spread my shortage payment over time?",
-    "answer": "Yes, if you don't pay the shortage in full, Freedom Mortgage will automatically spread the shortage amount over 12 months and add it to your monthly mortgage payment. Your new payment amount will be shown on your escrow analysis statement. This way, you pay a little extra each month instead of one large sum.",
-    "keywords": ["spread payment", "monthly", "12 months", "payment increase", "installment"]
+    "question": "Can I spread my shortage payment over monthly installments instead of paying in full?",
+    "answer": "Yes, if you don't pay the shortage in full, Freedom Mortgage will automatically spread the shortage amount over 12 months and add it to your monthly mortgage payment. Your new payment amount will be shown on your escrow analysis statement. This way, you pay a little extra each month instead of one large sum. You can also pay a partial amount now and spread the remaining balance over 12 months.",
+    "keywords": ["spread payment", "monthly", "12 months", "installment", "partial payment", "not pay full"]
   },
   {
     "id": "faq_4",
     "category": "Surplus",
     "question": "What is an escrow surplus?",
     "answer": "An escrow surplus occurs when your escrow account has more money than needed to cover your upcoming property taxes, insurance, and the required cushion. This can happen if your taxes or insurance decreased, or if you made additional escrow payments. When you have a surplus over $50, Freedom Mortgage will refund the excess amount to you.",
-    "keywords": ["surplus", "refund", "excess", "overage", "extra funds"]
+    "keywords": ["surplus", "refund", "excess", "overage", "extra funds", "what is surplus"]
   },
   {
     "id": "faq_5",
     "category": "Surplus",
     "question": "When will I receive my surplus refund check?",
     "answer": "If your escrow surplus is greater than $50, we will mail you a refund check within 30 days of completing your annual escrow analysis. The check will be sent to the mailing address on file for your account. If you haven't received your check within 30 days, please contact Customer Care to verify your address and check status.",
-    "keywords": ["refund check", "surplus refund", "30 days", "mail", "check status"]
+    "keywords": ["refund check", "surplus refund", "30 days", "mail", "check status", "where is check", "surplus check"]
   },
   {
     "id": "faq_6",
     "category": "Insurance",
-    "question": "My insurance changed. What happens to my escrow?",
-    "answer": "When your homeowners insurance premium changes, it affects your escrow account. If your premium increased, you may have a shortage and your monthly payment could go up. If it decreased, you may receive a surplus refund. We receive updates from your insurance company and adjust your escrow accordingly. The change will be reflected in your next escrow analysis.",
-    "keywords": ["insurance change", "premium", "homeowners insurance", "escrow impact"]
+    "question": "My homeowners insurance changed or I switched carriers. What happens to my escrow?",
+    "answer": "When your homeowners insurance premium changes or you switch carriers, it affects your escrow account. If your premium increased, you may have a shortage and your monthly payment could go up. If it decreased, you may receive a surplus refund. Please provide us with your new insurance policy details (company name, policy number, effective date) by uploading through your online account or contacting Customer Care. The change will be reflected in your next escrow analysis.",
+    "keywords": ["insurance change", "premium", "homeowners insurance", "switched insurance", "new insurance", "carrier change", "insurance update"]
   },
   {
     "id": "faq_7",
     "category": "Insurance",
-    "question": "I paid my insurance directly. Will I get a refund from escrow?",
-    "answer": "If you paid your insurance premium directly but we also paid it from your escrow account, please contact Customer Care with proof of your payment. We'll work with your insurance company to get the duplicate payment refunded, either to you or back to your escrow account. To avoid this, let us know before your premium is due if you plan to pay directly.",
-    "keywords": ["insurance refund", "duplicate payment", "paid directly", "proof of payment"]
+    "question": "I paid my insurance directly or received an insurance refund. What should I do?",
+    "answer": "If you paid your insurance premium directly but we also paid it from your escrow account (duplicate payment), please contact Customer Care at 1-800-220-3000 with proof of your payment. We'll work with your insurance company to get the duplicate payment refunded. If you received a refund check from your insurance company, you can apply it to your escrow by mailing a check with your loan number noted 'Apply to Escrow' or by contacting Customer Care to make a payment over the phone.",
+    "keywords": ["insurance refund", "duplicate payment", "paid directly", "proof of payment", "insurance check", "deposit to escrow"]
   },
   {
     "id": "faq_8",
     "category": "Taxes",
     "question": "My property taxes went up. How does this affect my payment?",
     "answer": "When property taxes increase, your escrow account needs to collect more money to pay them. This typically causes your monthly mortgage payment to increase. After we pay your higher tax bill or receive notice of the increase, we'll conduct an escrow analysis and send you a new payment amount. You may also have a shortage if the increase wasn't anticipated.",
-    "keywords": ["property taxes", "tax increase", "payment increase", "escrow analysis"]
+    "keywords": ["property taxes", "tax increase", "payment increase", "taxes went up"]
   },
   {
     "id": "faq_9",
     "category": "Taxes",
     "question": "I received a tax exemption. How do I update my escrow?",
     "answer": "If you've received a property tax exemption (such as a homestead, senior, veteran, or disability exemption), please send us documentation from your county tax assessor's office. You can upload it through your online account or mail it to us. Once verified, we'll update your escrow account and adjust your monthly payment accordingly, which may result in a lower payment or a surplus refund.",
-    "keywords": ["tax exemption", "homestead", "senior exemption", "veteran", "disability", "lower payment"]
+    "keywords": ["tax exemption", "homestead", "senior exemption", "veteran", "disability", "lower taxes"]
   },
   {
     "id": "faq_10",
     "category": "PMI",
-    "question": "When will my PMI be removed?",
-    "answer": "Private Mortgage Insurance (PMI) is typically removed when your loan balance reaches 78% of the original value of your home (based on the original purchase price or appraised value). You can also request cancellation when you reach 80% loan-to-value. To request early removal, you'll need to be current on payments, have a good payment history, and may need a new appraisal to confirm your home's value hasn't declined.",
-    "keywords": ["PMI", "private mortgage insurance", "removal", "78%", "80%", "loan-to-value", "cancellation"]
+    "question": "When will my PMI be automatically removed?",
+    "answer": "Private Mortgage Insurance (PMI) is automatically cancelled when your loan balance reaches 78% of the original home value (based on the original purchase price or appraised value at closing), based on your scheduled payments. This is required by the Homeowners Protection Act. You don't need to take any action - it will be removed automatically when you reach this threshold through normal payments.",
+    "keywords": ["PMI automatic", "auto removal", "78%", "automatic cancellation", "PMI drops off", "when PMI removed automatically"]
   },
   {
     "id": "faq_11",
     "category": "PMI",
-    "question": "How do I request PMI removal?",
-    "answer": "To request PMI removal, you can submit a written request through your online account or by mail. Your loan must be current, you should have a good payment history with no 30-day late payments in the last 12 months, and your loan balance must be at or below 80% of the original property value. We may require an appraisal at your expense to verify current property value.",
-    "keywords": ["PMI removal request", "cancel PMI", "written request", "requirements"]
+    "question": "How do I request early PMI removal before the automatic cancellation?",
+    "answer": "You can request PMI cancellation early when your loan balance reaches 80% of the original property value (before the automatic 78% threshold). To request early removal: 1) Submit a written request through your online account or by mail, 2) Your loan must be current with no 30-day late payments in the last 12 months, 3) You may need an appraisal at your expense to verify current property value. Contact Customer Care at 1-800-220-3000 to start the process.",
+    "keywords": ["PMI removal request", "cancel PMI", "request PMI", "early removal", "80%", "PMI cancellation request", "remove PMI"]
   },
   {
     "id": "faq_12",
     "category": "Payment Changes",
     "question": "Why did my monthly payment change?",
     "answer": "Your monthly mortgage payment can change for several reasons: property tax increases or decreases, homeowners insurance premium changes, changes to your PMI, or the result of an annual escrow analysis showing a shortage or surplus. Your principal and interest portion typically stays the same (unless you have an adjustable-rate mortgage), but the escrow portion can change annually based on your tax and insurance bills.",
-    "keywords": ["payment change", "monthly payment", "increase", "decrease", "why"]
+    "keywords": ["payment change", "monthly payment", "increase", "decrease", "why payment different", "payment went up"]
   },
   {
     "id": "faq_13",
     "category": "Payment Changes",
     "question": "When will my new payment amount take effect?",
     "answer": "After an escrow analysis, your new payment amount typically takes effect 30 days from the date of your escrow analysis statement. The statement will clearly show your new payment amount and the effective date. This gives you time to adjust your budget or pay any shortage in full if you prefer to keep your payment lower.",
-    "keywords": ["new payment", "effective date", "30 days", "when", "start"]
+    "keywords": ["new payment", "effective date", "30 days", "when start", "payment start date"]
   },
   {
     "id": "faq_14",
     "category": "Escrow Analysis",
-    "question": "What is an escrow analysis?",
-    "answer": "An escrow analysis is an annual review of your escrow account to ensure we're collecting enough money to pay your property taxes and insurance when they're due. We look at what was paid out over the past year, project what will be owed in the coming year, and make sure there's a cushion (usually two months of payments) for unexpected increases. The result may show a shortage, surplus, or no change needed.",
-    "keywords": ["escrow analysis", "annual review", "calculation", "cushion", "projection"]
+    "question": "What is an escrow analysis and what does it calculate?",
+    "answer": "An escrow analysis is an annual review of your escrow account to ensure we're collecting enough money to pay your property taxes and insurance when they're due. We look at what was paid out over the past year, project what will be owed in the coming year, and make sure there's a cushion (usually two months of payments) for unexpected increases. The result determines if you have a shortage (not enough), surplus (too much), or no change needed. Your payment breakdown shows how much goes to taxes, insurance, and any other escrowed items.",
+    "keywords": ["escrow analysis", "annual review", "what is analysis", "calculation", "breakdown", "how much taxes", "how much insurance"]
   },
   {
     "id": "faq_15",
     "category": "Escrow Analysis",
-    "question": "When does my escrow analysis happen?",
-    "answer": "Your escrow analysis is conducted once a year, typically around the anniversary of your loan closing or a few months before your property taxes are due. You'll receive an escrow analysis statement in the mail and/or online that shows the results, your new payment amount (if it changed), and any shortage or surplus.",
-    "keywords": ["analysis timing", "annual", "when", "anniversary", "statement"]
+    "question": "When does my escrow analysis happen and can I request one early?",
+    "answer": "Your escrow analysis is conducted once a year, typically around the anniversary of your loan closing or a few months before your property taxes are due. You'll receive an escrow analysis statement in the mail and/or online. If your taxes or insurance have changed significantly, you may request an off-cycle analysis by contacting Customer Care at 1-800-220-3000, though this is not guaranteed.",
+    "keywords": ["analysis timing", "annual", "when analysis", "request analysis", "early analysis", "off-cycle"]
   },
   {
     "id": "faq_16",
     "category": "Escrow Balance",
     "question": "How can I check my escrow balance?",
     "answer": "You can check your escrow balance anytime by logging into your account at FreedomMortgage.com or using the Freedom Mortgage mobile app. Your balance is also shown on your monthly mortgage statement. The balance fluctuates throughout the year as monthly payments are deposited and tax/insurance payments are disbursed.",
-    "keywords": ["escrow balance", "check balance", "online", "mobile app", "statement"]
+    "keywords": ["escrow balance", "check balance", "online", "mobile app", "statement", "how much in escrow"]
   },
   {
     "id": "faq_17",
     "category": "Disbursements",
     "question": "When will my taxes or insurance be paid from escrow?",
     "answer": "Freedom Mortgage pays your property taxes and insurance from your escrow account when they are due. Property taxes are typically paid based on your county's schedule (quarterly, semi-annually, or annually). Insurance premiums are paid before your policy renewal date. You can see upcoming and past disbursements in your online account under escrow activity.",
-    "keywords": ["disbursement", "tax payment", "insurance payment", "when paid", "escrow activity"]
+    "keywords": ["disbursement", "tax payment", "insurance payment", "when paid", "escrow activity", "did you pay"]
   },
   {
     "id": "faq_18",
     "category": "Refunds",
-    "question": "I sold my home. When will I get my escrow refund?",
-    "answer": "After your loan is paid off from a home sale, any remaining escrow balance will be refunded to you within 30 days. The refund check will be mailed to your forwarding address on file. Make sure to update your mailing address with us before closing so you receive your refund promptly.",
-    "keywords": ["sold home", "payoff", "escrow refund", "remaining balance", "closing"]
+    "question": "I sold my home or paid off my loan. When will I get my escrow refund?",
+    "answer": "After your loan is paid off from a home sale or refinance, any remaining escrow balance will be refunded to you within 30 days. The refund check will be mailed to your forwarding address on file. Make sure to update your mailing address with us before closing so you receive your refund promptly.",
+    "keywords": ["sold home", "payoff", "escrow refund", "remaining balance", "closing", "paid off loan"]
   },
   {
     "id": "faq_19",
     "category": "General",
     "question": "How do I contact Customer Care about my escrow?",
     "answer": "You can contact Freedom Mortgage Customer Care at 1-800-220-3000, Monday through Friday, 8 AM to 9 PM Eastern Time, and Saturday 9 AM to 3 PM Eastern Time. You can also send a secure message through your online account at FreedomMortgage.com, use our mobile app, or mail correspondence to Freedom Mortgage, P.O. Box 650789, Dallas, TX 75265-0789.",
-    "keywords": ["customer care", "contact", "phone number", "support", "help", "questions"]
+    "keywords": ["customer care", "contact", "phone number", "support", "help", "questions", "call"]
+  },
+  {
+    "id": "faq_20",
+    "category": "Auto-Pay",
+    "question": "I'm enrolled in Freedom Mortgage auto-pay. Will my payment update automatically when it changes?",
+    "answer": "Yes! If you are enrolled in automatic payments directly with Freedom Mortgage (not through your bank's bill pay), your payment amount will be updated automatically when your escrow analysis results in a new payment amount. You don't need to take any action - we'll withdraw the new amount on your next scheduled payment date after the change takes effect. You'll receive notice of the new amount before it's withdrawn.",
+    "keywords": ["auto-pay", "automatic payment", "freedom mortgage autopay", "update automatically", "enrolled autopay", "direct debit"]
+  },
+  {
+    "id": "faq_21",
+    "category": "Auto-Pay",
+    "question": "I pay through my bank's bill pay service. Do I need to update my payment amount?",
+    "answer": "Yes, if you pay through your bank's bill pay service (not Freedom Mortgage auto-pay), you must manually update your payment amount when it changes. After receiving your escrow analysis statement with your new payment amount, log into your bank's bill pay and update the amount before the effective date. Failure to update may result in underpayment and potential late fees.",
+    "keywords": ["bill pay", "bank bill pay", "manual update", "update payment", "change amount", "bank automatic"]
+  },
+  {
+    "id": "faq_22",
+    "category": "Delinquency",
+    "question": "My loan is delinquent or I've missed payments. What happens to my escrow shortage?",
+    "answer": "If your loan is delinquent, your escrow shortage still exists and will need to be addressed. However, we recommend focusing on bringing your loan current first before addressing the shortage separately. The shortage may be included in any repayment plan or loan modification. Contact Customer Care at 1-800-220-3000 to discuss your options - we have programs to help customers who are struggling with payments.",
+    "keywords": ["delinquent", "missed payments", "behind on mortgage", "late payments", "delinquency", "struggling"]
+  },
+  {
+    "id": "faq_23",
+    "category": "Prepayment",
+    "question": "Can I prepay or overpay into my escrow account to avoid future shortages?",
+    "answer": "While you can make additional payments to your escrow account, this generally won't prevent future payment changes. Your monthly escrow payment is recalculated annually based on projected expenses - if your taxes or insurance increase, your payment will still need to increase to cover those higher costs. Additional escrow payments may reduce or eliminate a current shortage, but the escrow portion of your monthly payment is calculated annually per federal regulations regardless of your current balance.",
+    "keywords": ["prepay escrow", "overpay escrow", "extra escrow", "prevent shortage", "avoid increase", "add money escrow"]
   }
 ]
