@@ -1,5 +1,5 @@
 """
-Airtable Integration for AI Trip Planner (moved to optional/airtable)
+Airtable Integration for Escrow Assistant (moved to optional/airtable)
 Captures traces for manual labeling and evaluation
 """
 
@@ -17,7 +17,7 @@ class AirtableTraceLogger:
     def __init__(self):
         self.api_key = os.getenv("AIRTABLE_API_KEY")
         self.base_id = os.getenv("AIRTABLE_BASE_ID")
-        self.table_name = os.getenv("AIRTABLE_TABLE_NAME", "trip_planner_traces")
+        self.table_name = os.getenv("AIRTABLE_TABLE_NAME", "escrow_assistant_traces")
         
         if not self.api_key or not self.base_id:
             print("⚠️ Airtable credentials not configured. Trace logging to Airtable disabled.")

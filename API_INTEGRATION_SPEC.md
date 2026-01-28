@@ -1,4 +1,4 @@
-# AI Trip Planner - Real API Integration Specification
+# Escrow Assistant - Real API Integration Specification
 
 ## Overview
 This document outlines the implementation plan for replacing placeholder tools with real API integrations to provide actual, up-to-date travel information.
@@ -666,7 +666,7 @@ def track_api_usage(api_name: str, endpoint: str, status: str):
 
 ## Conclusion
 
-This specification provides a roadmap for transforming the AI Trip Planner from a demo system with placeholder data to a production-ready application with real, actionable travel information. The phased approach allows for gradual implementation while managing costs and complexity.
+This specification provides a roadmap for transforming the Escrow Assistant from a demo system with placeholder data to a production-ready application with real, actionable travel information. The phased approach allows for gradual implementation while managing costs and complexity.
 
 Key benefits of real API integration:
 - **Accurate Information**: Real-time weather, prices, and availability

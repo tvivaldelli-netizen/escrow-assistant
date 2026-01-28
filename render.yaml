@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: ai-trip-planner-backend
+    name: escrow-assistant-backend
     env: python
     plan: free
     rootDir: backend

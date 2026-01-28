@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(C:Userstom.localbinuv.exe --version)",
+      "Bash(python:*)",
+      "Bash(~/.local/bin/uv.exe run python:*)",
+      "Bash(~/.local/bin/uv.exe run:*)",
+      "Bash(timeout:*)",
+      "Bash(curl:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(ping:*)",
+      "Bash(where:*)",
+      "Bash(.venv/Scripts/python.exe:*)",
+      "Bash(unzip:*)",
+      "Bash(..venvScriptsactivate)",
+      "Bash(uvicorn:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(git rm:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

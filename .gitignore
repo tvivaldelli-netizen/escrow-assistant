@@ -92,3 +92,8 @@ test scripts/*.json
 backend/archive/ 
 
 backend/__pycache__
+backend/.venv/
+backend/.env
+backend/data/feedback.json
+temp_docx_extract/
+_ul

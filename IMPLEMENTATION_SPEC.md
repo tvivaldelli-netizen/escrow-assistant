@@ -1,7 +1,7 @@
-# AI Trip Planner - Implementation Specification
+# Escrow Assistant - Implementation Specification
 
 ## Overview
-This document outlines the architecture improvements and fixes applied to the AI Trip Planner backend system, transforming it from a sequential agent execution model to a parallel execution model with proper tracing.
+This document outlines the architecture improvements and fixes applied to the Escrow Assistant backend system, transforming it from a sequential agent execution model to a parallel execution model with proper tracing.
 
 ## System Architecture
 
@@ -77,7 +77,7 @@ if _TRACING:
         space_id = os.getenv("ARIZE_SPACE_ID")
         api_key = os.getenv("ARIZE_API_KEY")
         if space_id and api_key:
-            tp = register(space_id=space_id, api_key=api_key, project_name="ai-trip-planner")
+            tp = register(space_id=space_id, api_key=api_key, project_name="escrow-assistant")
             LangChainInstrumentor().instrument(tracer_provider=tp, include_chains=True, include_agents=True, include_tools=True)
             LiteLLMInstrumentor().instrument(tracer_provider=tp, skip_dep_check=True)
     except Exception:
@@ -200,7 +200,7 @@ Use the provided `generate_itineraries.py` script to run comprehensive tests wit
 ## Monitoring & Observability
 
 ### Arize Integration
-- Project name in Arize: **"ai-trip-planner"**
+- Project name in Arize: **"escrow-assistant"**
 - Traces include:
   - All agent executions
   - Tool calls for each agent

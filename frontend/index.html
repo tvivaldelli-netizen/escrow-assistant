@@ -3,363 +3,993 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Plan Your Perfect Trip</title>
+  <title>Escrow Assistant Widget - Freedom Mortgage</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;900&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'fm-primary': '#00476A',
+            'fm-secondary': '#00273A',
+            'fm-bg': '#F8F9FE',
+            'fm-link': '#007BFF',
+            'fm-table-header': '#365F91',
+            'fm-row-alt': '#F2F2F2',
+            // Keep existing for compatibility
+            'fm-header': '#00273A',
+            'fm-teal': '#00476A',
+            'fm-teal-dark': '#00273A',
+            'fm-teal-light': '#e8f4f6',
+          },
+          fontFamily: {
+            'display': ['"Canela"', '"Poppins"', 'sans-serif'],
+            'body': ['"Poppins"', 'sans-serif'],
+          },
+          borderRadius: {
+            'pill': '9999px',
+          }
+        }
+      }
+    }
+  </script>
   <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* Typography System */
+    .text-display-1 {
+      font-family: "Canela", "Poppins", sans-serif;
+      font-size: clamp(48px, 4vw, 61px);
+      font-weight: 900;
+      line-height: 1.2;
+    }
+    .text-display-2 {
+      font-family: "Canela", "Poppins", sans-serif;
+      font-size: clamp(40px, 3.5vw, 49px);
+      font-weight: 900;
+      line-height: 1.2;
+    }
+    .text-title-1 {
+      font-family: "Poppins", sans-serif;
+      font-size: clamp(33px, 3vw, 39px);
+      font-weight: 600;
+      line-height: 1.3;
+    }
+    .text-title-2 {
+      font-family: "Poppins", sans-serif;
+      font-size: clamp(28px, 2.5vw, 31px);
+      font-weight: 600;
+      line-height: 1.3;
+    }
+    .text-subtitle-1 {
+      font-family: "Poppins", sans-serif;
+      font-size: clamp(23px, 2vw, 25px);
+      font-weight: 600;
+      line-height: 1.4;
+    }
+    .text-subtitle-2 {
+      font-family: "Poppins", sans-serif;
+      font-size: clamp(19px, 1.5vw, 20px);
+      font-weight: 600;
+      line-height: 1.4;
+    }
+    .text-secondary-header {
+      font-family: "Canela", "Poppins", sans-serif;
+      font-size: clamp(23px, 2vw, 25px);
+      font-weight: 900;
+      line-height: 1.3;
+    }
+    .text-paragraph {
+      font-family: "Poppins", sans-serif;
+      font-size: 15px;
+      font-weight: 400;
+      line-height: 1.5;
+    }
+    .text-paragraph-bold {
+      font-family: "Poppins", sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      line-height: 1.5;
+    }
+    .text-caption {
+      font-family: "Poppins", sans-serif;
+      font-size: 13px;
+      font-weight: 400;
+      line-height: 1.4;
+    }
+    .text-caption-bold {
+      font-family: "Poppins", sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1.4;
+    }
+    .text-form-label {
+      font-family: "Poppins", sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      text-transform: capitalize;
+      line-height: 1.4;
+    }
+    .text-button {
+      font-family: "Poppins", sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      text-transform: capitalize;
+    }
+    .text-button-small {
+      font-family: "Poppins", sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      text-transform: capitalize;
+    }
+    .text-link {
+      font-family: "Poppins", sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      color: #007BFF;
+    }
+
+    /* Widget animations */
+    .widget-panel {
+      transform: translateY(20px);
+      opacity: 0;
+      transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+      pointer-events: none;
+    }
+    .widget-panel.open {
+      transform: translateY(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Message animations */
+    .message-enter {
+      animation: messageIn 0.3s ease-out;
+    }
+    @keyframes messageIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Typing indicator */
+    .typing-indicator span {
+      animation: typing 1.4s infinite;
+    }
+    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typing {
+      0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+      30% { opacity: 1; transform: translateY(-4px); }
+    }
+
+    /* Pulse animation for trigger button */
+    @keyframes pulse-ring {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(1.3); opacity: 0; }
+    }
+    .pulse-ring::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: inherit;
+      animation: pulse-ring 2s ease-out infinite;
+      z-index: -1;
+    }
+
+    /* FAQ accordion */
+    .faq-item.expanded .faq-icon {
+      transform: rotate(45deg);
+    }
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease-out;
+    }
+    .faq-item.expanded .faq-answer {
+      max-height: 500px;
+    }
+
+    /* Scrollbar styling */
+    .widget-messages::-webkit-scrollbar {
+      width: 6px;
+    }
+    .widget-messages::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .widget-messages::-webkit-scrollbar-thumb {
+      background: #d1d5db;
+      border-radius: 3px;
+    }
+    .widget-messages::-webkit-scrollbar-thumb:hover {
+      background: #9ca3af;
+    }
+  </style>
 </head>
-<body class="bg-neutral-50 text-neutral-900 antialiased font-[Inter]">
-  <!-- Nav -->
-  <header class="border-b border-neutral-200 bg-white/80 backdrop-blur">
-    <div class="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-tr from-indigo-600 via-violet-600 to-fuchsia-600 text-white">
-          <i data-lucide="compass" class="h-5 w-5"></i>
-        </span>
-        <span class="text-lg font-semibold tracking-tight">Trip Planner</span>
-      </div>
-    </div>
-  </header>
+<body class="bg-fm-bg text-neutral-900 antialiased font-body">
 
-  <!-- Hero -->
-  <section class="mx-auto max-w-7xl px-6 pt-10 pb-8">
-    <div class="relative overflow-hidden rounded-2xl border border-neutral-200 bg-gradient-to-tr from-indigo-600 via-violet-600 to-fuchsia-600">
-      <div class="absolute inset-0 opacity-20">
-        <img alt="Mountain landscape" class="h-full w-full object-cover"
-             src="https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=2000&auto=format&fit=crop" />
-      </div>
-      <div class="relative grid gap-6 p-8 md:grid-cols-3 md:p-12">
-        <div class="md:col-span-2">
-          <h1 class="text-white text-4xl md:text-5xl font-semibold tracking-tight leading-tight">
-            Plan Your Perfect Trip
-          </h1>
-          <p class="mt-3 text-indigo-100/90 text-base md:text-lg">
-            Discover destinations, craft smart budgets, and get a personalized day-by-day itinerary in seconds.
-          </p>
-          <div class="mt-6 flex flex-wrap items-center gap-3">
-            <div class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-2 text-white text-sm">
-              <i data-lucide="clock-8" class="h-4 w-4"></i>
-              Plan faster
-            </div>
-            <div class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-2 text-white text-sm">
-              <i data-lucide="map" class="h-4 w-4"></i>
-              Smarter routes
-            </div>
-            <div class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-2 text-white text-sm">
-              <i data-lucide="sparkles" class="h-4 w-4"></i>
-              Local gems
-            </div>
-          </div>
-        </div>
-        <div class="hidden md:block">
-          <div class="relative h-full w-full rounded-xl bg-white/10 p-4 ring-1 ring-white/20 backdrop-blur">
-            <img alt="City minimal render" class="h-full w-full rounded-lg object-cover"
-                 src="https://images.unsplash.com/photo-1521295121783-8a321d551ad2?q=80&w=1600&auto=format&fit=crop" />
-            <div class="absolute bottom-4 left-4 flex items-center gap-2 rounded-full bg-black/30 px-3 py-1.5 text-white text-xs">
-              <i data-lucide="camera" class="h-3.5 w-3.5"></i> Inspiration
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Feature cards -->
-    <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <div class="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm">
-        <div class="flex items-center gap-3">
-          <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-100 text-neutral-700">
-            <i data-lucide="search" class="h-5 w-5"></i>
-          </span>
-          <div>
-            <div class="font-semibold tracking-tight">Research</div>
-            <p class="text-sm text-neutral-600">Weather, highlights, neighborhoods.</p>
-          </div>
-        </div>
-      </div>
-      <div class="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm">
-        <div class="flex items-center gap-3">
-          <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-100 text-neutral-700">
-            <i data-lucide="calendar-clock" class="h-5 w-5"></i>
-          </span>
-          <div>
-            <div class="font-semibold tracking-tight">Itineraries</div>
-            <p class="text-sm text-neutral-600">Day-by-day schedules, in minutes.</p>
-          </div>
-        </div>
-      </div>
-      <div class="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm">
-        <div class="flex items-center gap-3">
-          <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-100 text-neutral-700">
-            <i data-lucide="wallet" class="h-5 w-5"></i>
-          </span>
-          <div>
-            <div class="font-semibold tracking-tight">Budget</div>
-            <p class="text-sm text-neutral-600">Smart spend suggestions.</p>
-          </div>
-        </div>
-      </div>
-      <div class="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm">
-        <div class="flex items-center gap-3">
-          <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-100 text-neutral-700">
-            <i data-lucide="map-pin" class="h-5 w-5"></i>
-          </span>
-          <div>
-            <div class="font-semibold tracking-tight">Local</div>
-            <p class="text-sm text-neutral-600">Authentic finds & hidden gems.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Planner -->
-  <main class="mx-auto max-w-7xl px-6 pb-20">
-    <div class="grid gap-6 lg:grid-cols-3">
-      <!-- Form -->
-      <section class="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
-        <h2 class="text-2xl font-semibold tracking-tight">Plan Your Trip</h2>
-        <p class="mt-1 text-sm text-neutral-600">Enter a destination, number of days, budget, and interests.</p>
-
-        <form id="plannerForm" class="mt-6 space-y-4" autocomplete="off">
-          <!-- Destination -->
-          <div>
-            <label for="destination" class="block text-sm font-medium text-neutral-800">Destination</label>
-            <div class="mt-2 relative">
-              <input id="destination" type="text" required placeholder="e.g., Kyoto, Japan"
-                     class="w-full rounded-lg border border-neutral-300 bg-white px-3.5 py-2.5 text-neutral-900 placeholder-neutral-400 shadow-sm outline-none ring-0 focus:border-neutral-400 focus:ring-2 focus:ring-neutral-200" />
-              <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400">
-                <i data-lucide="map-pin" class="h-4.5 w-4.5"></i>
-              </span>
-            </div>
-          </div>
-
-          <!-- Duration -->
-          <div>
-            <label for="duration" class="block text-sm font-medium text-neutral-800">Duration (days)</label>
-            <div class="mt-2 relative">
-              <input id="duration" type="number" inputmode="numeric" min="1" max="30" step="1" required placeholder="e.g., 5"
-                     class="w-full rounded-lg border border-neutral-300 bg-white px-3.5 py-2.5 text-neutral-900 placeholder-neutral-400 shadow-sm outline-none ring-0 focus:border-neutral-400 focus:ring-2 focus:ring-neutral-200" />
-              <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400">
-                <i data-lucide="calendar" class="h-4.5 w-4.5"></i>
-              </span>
-            </div>
-          </div>
-
-          <!-- Budget (custom select) -->
-          <div class="relative">
-            <label class="block text-sm font-medium text-neutral-800">Budget</label>
-            <input id="budgetValue" type="hidden" value="moderate" />
-            <button id="budgetBtn" type="button"
-                    class="mt-2 w-full inline-flex items-center justify-between rounded-lg border border-neutral-300 bg-white px-3.5 py-2.5 text-left text-neutral-900 shadow-sm hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-neutral-200">
-              <span id="budgetLabel">Moderate</span>
-              <i data-lucide="chevron-down" class="h-4.5 w-4.5 text-neutral-500"></i>
-            </button>
-            <div id="budgetMenu" class="absolute z-20 mt-2 hidden w-full overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-lg">
-              <button data-value="budget" class="flex w-full items-center justify-between px-3.5 py-2.5 text-sm hover:bg-neutral-50">
-                <span class="flex items-center gap-2">
-                  <i data-lucide="piggy-bank" class="h-4 w-4 text-neutral-500"></i>
-                  Budget
-                </span>
-                <span class="text-neutral-500 text-xs">Save more</span>
-              </button>
-              <button data-value="moderate" class="flex w-full items-center justify-between px-3.5 py-2.5 text-sm hover:bg-neutral-50">
-                <span class="flex items-center gap-2">
-                  <i data-lucide="wallet" class="h-4 w-4 text-neutral-500"></i>
-                  Moderate
-                </span>
-                <span class="text-neutral-500 text-xs">Balanced</span>
-              </button>
-              <button data-value="luxury" class="flex w-full items-center justify-between px-3.5 py-2.5 text-sm hover:bg-neutral-50">
-                <span class="flex items-center gap-2">
-                  <i data-lucide="gem" class="h-4 w-4 text-neutral-500"></i>
-                  Luxury
-                </span>
-                <span class="text-neutral-500 text-xs">Premium</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Interests -->
-          <div>
-            <label for="interests" class="block text-sm font-medium text-neutral-800">Interests</label>
-            <div class="mt-2 relative">
-              <input id="interests" type="text" placeholder="e.g., food, culture, museums, nightlife"
-                     class="w-full rounded-lg border border-neutral-300 bg-white px-3.5 py-2.5 text-neutral-900 placeholder-neutral-400 shadow-sm outline-none ring-0 focus:border-neutral-400 focus:ring-2 focus:ring-neutral-200" />
-              <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400">
-                <i data-lucide="sparkles" class="h-4.5 w-4.5"></i>
-              </span>
-            </div>
-          </div>
-
-          <!-- Submit -->
-          <div class="pt-2">
-            <button type="submit"
-                    class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-neutral-900 px-4 py-3 text-white shadow-sm transition hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-300">
-              <i data-lucide="route" class="h-5 w-5"></i>
-              <span class="font-medium">Plan My Trip</span>
-            </button>
-          </div>
-        </form>
-      </section>
-
-      <!-- Output -->
-      <section class="lg:col-span-2 space-y-6">
-        <div id="placeholderCard" class="rounded-xl border border-neutral-200 bg-white p-8 text-center shadow-sm">
-          <h3 class="text-xl md:text-2xl font-semibold tracking-tight">Fill out the form to get your personalized trip plan</h3>
-          <p class="mt-2 text-neutral-600">Enter your details on the left—your itinerary will appear here.</p>
-          <div class="mt-6 grid gap-3 sm:grid-cols-3">
-            <div class="rounded-lg border border-neutral-200 p-4">
-              <div class="flex items-center gap-2 text-neutral-700">
-                <i data-lucide="sunrise" class="h-4 w-4"></i>
-                Morning ideas
-              </div>
-              <p class="mt-1 text-sm text-neutral-600">Neighborhood walk, cafe, must-see spot.</p>
-            </div>
-            <div class="rounded-lg border border-neutral-200 p-4">
-              <div class="flex items-center gap-2 text-neutral-700">
-                <i data-lucide="utensils" class="h-4 w-4"></i>
-                Food moments
-              </div>
-              <p class="mt-1 text-sm text-neutral-600">Street food to chef-led tastings.</p>
-            </div>
-            <div class="rounded-lg border border-neutral-200 p-4">
-              <div class="flex items-center gap-2 text-neutral-700">
-                <i data-lucide="moon" class="h-4 w-4"></i>
-                Evenings
-              </div>
-              <p class="mt-1 text-sm text-neutral-600">Sunsets, shows, speakeasies.</p>
-            </div>
-          </div>
-        </div>
-
-        <div id="results" class="hidden space-y-6"></div>
-      </section>
-    </div>
-  </main>
-
-  <footer class="border-t border-neutral-200 bg-white">
-    <div class="mx-auto max-w-7xl px-6 py-10 text-sm text-neutral-600">
-      <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+  <!--
+    =====================================================
+    PLACEHOLDER: Your Escrow Analysis Page Content Here
+    The floating widget will overlay on top of this page
+    =====================================================
+  -->
+  <div class="min-h-screen p-8">
+    <div class="max-w-6xl mx-auto">
+      <!-- Simulated FM Page Header -->
+      <header class="bg-fm-secondary text-white px-6 py-3 flex items-center justify-between rounded-t-lg">
+        <!-- Logo -->
         <div class="flex items-center gap-2">
-          <span class="inline-flex h-7 w-7 items-center justify-center rounded-md bg-neutral-900 text-white">
-            <i data-lucide="compass" class="h-4.5 w-4.5"></i>
-          </span>
-          <span>&copy; <span id="year"></span> Trip Planner</span>
+          <svg class="h-8 w-8" viewBox="0 0 40 40" fill="currentColor">
+            <path d="M20 5 L35 20 L30 20 L30 35 L10 35 L10 20 L5 20 Z" fill="currentColor" opacity="0.9"/>
+            <path d="M15 35 L15 22 L25 22 L25 35" fill="#00273A"/>
+          </svg>
+          <div class="flex flex-col">
+            <span class="text-xs tracking-widest font-light opacity-90">FREEDOM</span>
+            <span class="text-sm font-semibold -mt-1">MORTGAGE</span>
+          </div>
         </div>
-        <div class="flex items-center gap-4">
-          <a class="hover:text-neutral-900" href="#">Privacy</a>
-          <a class="hover:text-neutral-900" href="#">Terms</a>
-          <a class="hover:text-neutral-900" href="#">Support</a>
+
+        <!-- Navigation + Right Side grouped together -->
+        <div class="flex items-center gap-6">
+          <nav class="hidden md:flex items-center gap-1 text-sm">
+            <button class="px-3 py-2 hover:bg-white/10 rounded flex items-center gap-1">
+              Loan Information
+              <i data-lucide="chevron-down" class="h-3 w-3"></i>
+            </button>
+            <button class="px-3 py-2 hover:bg-white/10 rounded flex items-center gap-1">
+              Payment Center
+              <i data-lucide="chevron-down" class="h-3 w-3"></i>
+            </button>
+            <button class="px-3 py-2 hover:bg-white/10 rounded flex items-center gap-1">
+              Documents
+              <i data-lucide="chevron-down" class="h-3 w-3"></i>
+            </button>
+            <button class="px-3 py-2 hover:bg-white/10 rounded flex items-center gap-1">
+              Support
+              <i data-lucide="chevron-down" class="h-3 w-3"></i>
+            </button>
+          </nav>
+
+          <!-- Right Side: Messages, User, Logout -->
+          <div class="flex items-center gap-3 text-sm">
+          <button class="flex items-center gap-2 hover:bg-white/10 px-2 py-1 rounded transition">
+            <i data-lucide="mail" class="h-4 w-4"></i>
+            <span class="hidden sm:inline">Messages</span>
+          </button>
+          <div class="h-8 w-8 rounded-full bg-fm-teal flex items-center justify-center text-xs font-semibold">
+            AJ
+          </div>
+          <button class="hover:bg-white/10 px-2 py-1 rounded transition">
+            Log Out
+          </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Breadcrumb -->
+      <div class="bg-white border-b border-neutral-200 px-6 py-2 text-sm text-neutral-600">
+        <span class="text-fm-link">Home</span> &gt; Escrow Analysis
+      </div>
+
+      <!-- Page Title -->
+      <div class="bg-white px-6 py-4 border-b border-neutral-200">
+        <h1 class="text-title-1 text-neutral-800">Escrow Analysis</h1>
+      </div>
+
+      <!-- Sample Page Content Grid -->
+      <div class="bg-fm-bg p-6 grid lg:grid-cols-2 gap-6">
+        <!-- Left Column -->
+        <div class="space-y-6">
+          <!-- Payment Summary Card -->
+          <div class="bg-white rounded-lg border border-neutral-200 p-6">
+            <h2 class="text-subtitle-1 mb-4">Your Escrow Analysis</h2>
+            <p class="text-paragraph text-neutral-600 mb-4">Please review the information outlined below, which includes your new escrow payment amount.</p>
+            <table class="w-full text-sm">
+              <thead class="bg-fm-row-alt text-neutral-900">
+                <tr>
+                  <th class="text-left px-3 py-2 font-semibold">Payment details</th>
+                  <th class="text-right px-3 py-2 font-semibold">Current monthly payment</th>
+                  <th class="text-right px-3 py-2 font-semibold">New payment amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="border-b border-neutral-200">
+                  <td class="px-3 py-2">Monthly Principal & Interest Payment</td>
+                  <td class="text-right px-3 py-2">$689.54</td>
+                  <td class="text-right px-3 py-2">$689.54</td>
+                </tr>
+                <tr class="border-b border-neutral-200">
+                  <td class="px-3 py-2">Monthly Escrow Payment</td>
+                  <td class="text-right px-3 py-2">$314.57</td>
+                  <td class="text-right px-3 py-2">$315.00</td>
+                </tr>
+                <tr class="border-b border-neutral-200">
+                  <td class="px-3 py-2">Monthly Escrow Shortage</td>
+                  <td class="text-right px-3 py-2">$0.00</td>
+                  <td class="text-right px-3 py-2">$1.00</td>
+                </tr>
+                <tr class="bg-fm-secondary text-white font-semibold">
+                  <td class="px-3 py-2">Total Monthly Payment</td>
+                  <td class="text-right px-3 py-2">$1,004.11</td>
+                  <td class="text-right px-3 py-2">$1,005.54</td>
+                </tr>
+              </tbody>
+            </table>
+            <button class="mt-4 bg-fm-primary hover:bg-fm-secondary text-white px-5 py-2.5 rounded-full text-button transition flex items-center gap-2">
+              View Your Escrow Analysis Statement
+              <i data-lucide="external-link" class="h-4 w-4"></i>
+            </button>
+          </div>
+
+          <!-- Shortage Info -->
+          <div class="bg-white rounded-lg border border-neutral-200 p-6">
+            <h2 class="text-subtitle-1 mb-4">You Have an Escrow Shortage</h2>
+            <table class="w-full text-sm mb-4">
+              <tr class="border-b border-neutral-200">
+                <td class="py-2 text-neutral-600">Required Minimum Balance</td>
+                <td class="py-2 text-right">$1,260.00</td>
+              </tr>
+              <tr class="border-b border-neutral-200">
+                <td class="py-2 text-neutral-600">Lowest Projected Escrow Balance</td>
+                <td class="py-2 text-right">$1,248.00</td>
+              </tr>
+              <tr>
+                <td class="py-2 font-semibold">Amount</td>
+                <td class="py-2 text-right font-semibold text-red-600">$12.00</td>
+              </tr>
+            </table>
+            <p class="text-paragraph text-neutral-600">You have an escrow shortage of $12.00. For more details, <a href="#" class="text-link underline">see section 3</a> of page 2 of the escrow analysis.</p>
+          </div>
+
+          <!-- How to Pay for Your Escrow Shortage -->
+          <div class="bg-white rounded-lg border border-neutral-200 p-6">
+            <h2 class="text-subtitle-1 mb-4">How to Pay for Your Escrow Shortage</h2>
+
+            <div class="bg-fm-row-alt rounded-lg p-4 mb-4">
+              <p class="text-paragraph text-neutral-600 mb-2">You have an escrow shortage of $12.00. Your monthly payment will be increased to pay your shortage over 12 months starting February 1, 2026.</p>
+              <p class="text-paragraph-bold">New monthly payment: <span class="text-fm-primary">$1,005.54</span></p>
+            </div>
+
+            <ul class="text-paragraph text-neutral-600 space-y-2 mb-6">
+              <li class="flex gap-2">
+                <span class="text-fm-primary">•</span>
+                <span>If you are enrolled in Freedom Mortgage recurring payments, your new payment amount will update automatically.</span>
+              </li>
+              <li class="flex gap-2">
+                <span class="text-fm-primary">•</span>
+                <span>If paying through your banking institution, please contact them to change your monthly bill pay amount, based on the effective date.</span>
+              </li>
+            </ul>
+
+            <div class="border-t border-neutral-200 pt-4">
+              <h3 class="text-subtitle-2 mb-2">Optional: Pay Shortage in Full</h3>
+              <p class="text-paragraph text-neutral-600 mb-3">By choosing to pay your escrow shortage of $12.00 in full beginning February 1, 2026, it may still result in a monthly payment increase due to higher taxes and/or insurance.</p>
+              <p class="text-paragraph-bold bg-fm-row-alt rounded-lg px-4 py-3 mb-4">New monthly payment: <span class="text-fm-primary">$1,004.54</span></p>
+              <button class="bg-fm-primary hover:bg-fm-secondary text-white px-6 py-2.5 rounded-full text-button transition">
+                Pay Now
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="space-y-6">
+          <!-- Analysis Summary -->
+          <div class="bg-white rounded-lg border border-neutral-200 p-6">
+            <h2 class="text-subtitle-1 mb-4">Your Escrow Analysis Summary</h2>
+            <p class="text-paragraph text-neutral-600 mb-4">Based on the annual escrow account analysis, your new total mortgage payment will be $1,005.54, starting with your payment due on February 1, 2026. This includes an escrow shortage of $12.00. This is due to an increase in your taxes and/or insurance.</p>
+            <div class="bg-fm-row-alt rounded-lg p-4 text-paragraph flex gap-3 items-start">
+              <div class="flex-shrink-0 h-6 w-6 rounded-full bg-fm-secondary flex items-center justify-center">
+                <i data-lucide="info" class="h-3.5 w-3.5 text-white"></i>
+              </div>
+              <p class="text-neutral-600 text-sm">Freedom Mortgage does not set these amounts. We act on your behalf to pay these obligations. Please contact your local tax authority or insurance company with questions about these amounts.</p>
+            </div>
+          </div>
+
+          <!-- FAQ Section -->
+          <div class="bg-white rounded-lg border border-neutral-200 p-6">
+            <h2 class="text-subtitle-1 mb-4">Frequently Asked Questions</h2>
+            <div class="space-y-2" id="faqList">
+              <!-- FAQ 1 -->
+              <div class="faq-item border border-neutral-200 rounded overflow-hidden">
+                <button onclick="toggleFaq(this)" class="w-full p-3 flex justify-between items-center cursor-pointer hover:bg-neutral-50 text-left">
+                  <span class="text-sm font-medium">What is a shortage, and why might I have one?</span>
+                  <i data-lucide="plus" class="faq-icon h-4 w-4 text-neutral-400 flex-shrink-0 transition-transform"></i>
+                </button>
+                <div class="faq-answer hidden px-3 pb-3 bg-fm-row-alt rounded-b">
+                  <p class="text-sm text-neutral-600">Your escrow account exists to pay escrowed items (taxes, insurance, mortgage insurance, etc.) as they come due. Shortages are commonly caused by increases in taxes or insurance, changing your insurance carrier off-cycle, or underestimated taxes when you closed your loan. A regular analysis of the escrow account is required to ensure that enough funds are available to pay these expenses as they come due. A shortage exists if the analysis shows that the minimum required balance falls below the amount required to make the projected payments of escrowed expenses.</p>
+                </div>
+              </div>
+
+              <!-- FAQ 2 -->
+              <div class="faq-item border border-neutral-200 rounded overflow-hidden">
+                <button onclick="toggleFaq(this)" class="w-full p-3 flex justify-between items-center cursor-pointer hover:bg-neutral-50 text-left">
+                  <span class="text-sm font-medium">Do I need to do anything if I have a bill pay service through my bank?</span>
+                  <i data-lucide="plus" class="faq-icon h-4 w-4 text-neutral-400 flex-shrink-0 transition-transform"></i>
+                </button>
+                <div class="faq-answer hidden px-3 pb-3 bg-fm-row-alt rounded-b">
+                  <p class="text-sm text-neutral-600">You will need to contact your bank and change your monthly bill pay amount to your new monthly mortgage payment amount, based on the effective date.</p>
+                </div>
+              </div>
+
+              <!-- FAQ 3 -->
+              <div class="faq-item border border-neutral-200 rounded overflow-hidden">
+                <button onclick="toggleFaq(this)" class="w-full p-3 flex justify-between items-center cursor-pointer hover:bg-neutral-50 text-left">
+                  <span class="text-sm font-medium">Do I need to do anything if I'm enrolled in automatic payments with Freedom Mortgage?</span>
+                  <i data-lucide="plus" class="faq-icon h-4 w-4 text-neutral-400 flex-shrink-0 transition-transform"></i>
+                </button>
+                <div class="faq-answer hidden px-3 pb-3 bg-fm-row-alt rounded-b">
+                  <p class="text-sm text-neutral-600">No action is needed if you have a shortage and want us to spread that amount over the next 12 months. We'll automatically adjust your monthly payment amount for you. If you'd like to voluntarily pay your shortage in a lump sum, instead, see below for our payment options available to you.</p>
+                </div>
+              </div>
+
+              <!-- FAQ 4 -->
+              <div class="faq-item border border-neutral-200 rounded overflow-hidden">
+                <button onclick="toggleFaq(this)" class="w-full p-3 flex justify-between items-center cursor-pointer hover:bg-neutral-50 text-left">
+                  <span class="text-sm font-medium">Am I able to pay my shortage in a lump sum?</span>
+                  <i data-lucide="plus" class="faq-icon h-4 w-4 text-neutral-400 flex-shrink-0 transition-transform"></i>
+                </button>
+                <div class="faq-answer hidden px-3 pb-3 bg-fm-row-alt rounded-b">
+                  <p class="text-sm text-neutral-600">Yes. You may pay your shortage in full by submitting a payment to us. Please note that you are not required to pay your shortage in a lump sum. If you choose to pay your shortage in a lump sum, your monthly mortgage payment may still increase due to changes in your taxes and/or insurance. Making a payment is easy on your mobile app and website, or you can contact one of our Customer Care representatives and make a payment right over the phone.</p>
+                </div>
+              </div>
+
+              <!-- FAQ 5 -->
+              <div class="faq-item border border-neutral-200 rounded overflow-hidden">
+                <button onclick="toggleFaq(this)" class="w-full p-3 flex justify-between items-center cursor-pointer hover:bg-neutral-50 text-left">
+                  <span class="text-sm font-medium">Can I prepay my escrow amount so my payment does not change?</span>
+                  <i data-lucide="plus" class="faq-icon h-4 w-4 text-neutral-400 flex-shrink-0 transition-transform"></i>
+                </button>
+                <div class="faq-answer hidden px-3 pb-3 bg-fm-row-alt rounded-b">
+                  <p class="text-sm text-neutral-600">No. Taxes and insurance costs routinely change. The escrow portion of your monthly payment is collected so disbursements can be made when they're due – changes to the escrowed expenses will result in a change in your mortgage payment. While making supplemental payments toward your escrow may reduce or eliminate an escrow shortage, the escrow portion of your monthly payment is calculated annually in accordance with applicable law.</p>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- CTA to open Escrow Assistant -->
+            <button onclick="toggleWidget()" class="mt-4 w-full flex items-center justify-center gap-2 text-fm-primary hover:text-white text-button py-2.5 border border-fm-primary rounded-full hover:bg-fm-primary transition">
+              <i data-lucide="message-circle-question" class="h-4 w-4"></i>
+              Have more questions? Ask our Escrow Assistant
+            </button>
+          </div>
+
+          <!-- Save on Home Insurance (Matic) -->
+          <div class="bg-white rounded-lg border border-neutral-200 p-6">
+            <div class="flex items-start gap-4">
+              <div class="flex-shrink-0 h-10 w-10 rounded-full bg-fm-teal-light flex items-center justify-center">
+                <i data-lucide="house" class="h-5 w-5 text-fm-primary"></i>
+              </div>
+              <div class="flex-1">
+                <h2 class="text-subtitle-2 mb-2">Save on Home Insurance</h2>
+                <p class="text-paragraph text-neutral-600 mb-4">You could save money by quickly comparing your current plan with top quotes from Matic's network of 40+ A-rated carriers.</p>
+                <a href="#" class="text-link hover:opacity-80 flex items-center gap-1 transition">
+                  Get Started Online
+                  <i data-lucide="arrow-right" class="h-4 w-4"></i>
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
+
+      <!-- Footer -->
+      <footer class="bg-fm-secondary text-white px-6 py-4 rounded-b-lg text-caption">
+        <div class="flex justify-between items-center">
+          <span>&copy; 2026 Freedom Mortgage Corporation</span>
+          <div class="flex gap-4">
+            <a href="#" class="hover:underline">Privacy</a>
+            <a href="#" class="hover:underline">Terms</a>
+            <a href="#" class="hover:underline">Contact Us</a>
+          </div>
+        </div>
+      </footer>
     </div>
-  </footer>
+  </div>
+
+  <!--
+    =====================================================
+    FLOATING CHAT WIDGET - Escrow Assistant
+    =====================================================
+  -->
+  <div id="chatWidget" class="fixed bottom-6 right-4 z-50 font-body">
+
+    <!-- Chat Panel -->
+    <div id="chatPanel" class="widget-panel absolute bottom-16 right-0 w-[380px] h-[520px] bg-white rounded-xl shadow-2xl border border-neutral-200 flex flex-col overflow-hidden sm:w-[380px] max-sm:fixed max-sm:inset-4 max-sm:w-auto max-sm:h-auto max-sm:bottom-auto max-sm:right-auto max-sm:rounded-xl">
+
+      <!-- Header -->
+      <div class="bg-fm-secondary text-white px-4 py-3 flex items-center justify-between flex-shrink-0">
+        <div class="flex items-center gap-2">
+          <i data-lucide="message-circle-question" class="h-5 w-5"></i>
+          <span class="font-medium">Escrow Assistant</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <button id="newChatBtn" onclick="resetChat()" class="hidden items-center gap-1 text-xs bg-white/10 hover:bg-white/20 rounded px-2 py-1 transition">
+            <i data-lucide="plus" class="h-3 w-3"></i>
+            New
+          </button>
+          <button onclick="toggleWidget()" class="hover:bg-white/10 rounded p-1.5 transition">
+            <i data-lucide="x" class="h-5 w-5"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Content Area -->
+      <div class="flex-1 overflow-hidden flex flex-col">
+
+        <!-- Welcome Card (Initial State) -->
+        <div id="welcomeCard" class="flex-1 overflow-y-auto p-4">
+          <div class="text-center mb-4">
+            <div class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-fm-teal-light text-fm-primary mb-3">
+              <i data-lucide="message-circle-question" class="h-6 w-6"></i>
+            </div>
+            <h2 class="text-subtitle-2 text-neutral-800">How can I help?</h2>
+            <p class="text-caption text-neutral-500 mt-1">Ask me about your escrow account</p>
+          </div>
+
+          <!-- Quick Questions -->
+          <div class="space-y-2">
+            <button onclick="askQuestion('What is an escrow shortage?')" class="w-full flex items-center gap-3 rounded-lg border border-neutral-200 p-3 text-left hover:bg-fm-teal-light hover:border-fm-primary transition">
+              <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-fm-teal-light text-fm-secondary shrink-0">
+                <i data-lucide="alert-circle" class="h-4 w-4"></i>
+              </span>
+              <div>
+                <div class="text-paragraph-bold">Shortages</div>
+                <p class="text-caption text-neutral-500">What causes them & how to pay</p>
+              </div>
+            </button>
+
+            <button onclick="askQuestion('Why did my payment change?')" class="w-full flex items-center gap-3 rounded-lg border border-neutral-200 p-3 text-left hover:bg-fm-teal-light hover:border-fm-primary transition">
+              <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-fm-teal-light text-fm-secondary shrink-0">
+                <i data-lucide="trending-up" class="h-4 w-4"></i>
+              </span>
+              <div>
+                <div class="text-paragraph-bold">Payment Changes</div>
+                <p class="text-caption text-neutral-500">Understanding your new amount</p>
+              </div>
+            </button>
+
+            <button onclick="askQuestion('When will my PMI be removed?')" class="w-full flex items-center gap-3 rounded-lg border border-neutral-200 p-3 text-left hover:bg-fm-teal-light hover:border-fm-primary transition">
+              <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-fm-teal-light text-fm-secondary shrink-0">
+                <i data-lucide="shield-check" class="h-4 w-4"></i>
+              </span>
+              <div>
+                <div class="text-paragraph-bold">PMI Removal</div>
+                <p class="text-caption text-neutral-500">Requirements & how to request</p>
+              </div>
+            </button>
+
+            <button onclick="askQuestion('What is an escrow surplus?')" class="w-full flex items-center gap-3 rounded-lg border border-neutral-200 p-3 text-left hover:bg-fm-teal-light hover:border-fm-primary transition">
+              <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-fm-teal-light text-fm-secondary shrink-0">
+                <i data-lucide="piggy-bank" class="h-4 w-4"></i>
+              </span>
+              <div>
+                <div class="text-paragraph-bold">Surplus Refunds</div>
+                <p class="text-caption text-neutral-500">When & how you'll receive it</p>
+              </div>
+            </button>
+
+            <button onclick="askQuestion('My insurance changed. What happens to my escrow?')" class="w-full flex items-center gap-3 rounded-lg border border-neutral-200 p-3 text-left hover:bg-fm-teal-light hover:border-fm-primary transition">
+              <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-fm-teal-light text-fm-secondary shrink-0">
+                <i data-lucide="shield" class="h-4 w-4"></i>
+              </span>
+              <div>
+                <div class="text-paragraph-bold">Insurance Changes</div>
+                <p class="text-caption text-neutral-500">How it affects your escrow</p>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Chat Messages Container (Hidden Initially) -->
+        <div id="chatContainer" class="hidden flex-1 flex flex-col overflow-hidden">
+          <div id="chatMessages" class="widget-messages flex-1 overflow-y-auto p-4 space-y-4">
+            <!-- Messages will be inserted here -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Input Area -->
+      <div class="border-t border-neutral-200 p-3 flex-shrink-0 bg-white">
+        <form id="chatForm" class="flex gap-2" autocomplete="off">
+          <input
+            id="questionInput"
+            type="text"
+            placeholder="Type your question..."
+            class="flex-1 rounded-full border border-neutral-300 bg-white px-4 py-2 text-paragraph text-neutral-900 placeholder-neutral-400 outline-none focus:border-fm-primary focus:ring-2 focus:ring-fm-teal-light"
+          />
+          <button
+            type="submit"
+            id="sendButton"
+            class="inline-flex items-center justify-center rounded-full bg-fm-primary px-3 py-2 text-white shadow-sm transition hover:bg-fm-secondary focus:outline-none focus:ring-2 focus:ring-fm-teal-light disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <i data-lucide="send" class="h-4 w-4"></i>
+          </button>
+        </form>
+        <p class="mt-2 text-caption text-neutral-400 text-center">
+          General info only. <a href="tel:1-800-220-3000" class="text-fm-link hover:underline">Contact Care</a> for account details.
+        </p>
+      </div>
+
+    </div>
+
+    <!-- Floating Trigger Button -->
+    <button
+      id="chatWidgetBtn"
+      onclick="toggleWidget()"
+      class="relative h-14 w-14 rounded-full bg-fm-secondary text-white shadow-lg hover:bg-fm-primary transition-all duration-300 flex items-center justify-center"
+      aria-label="Open Escrow Assistant"
+    >
+      <i data-lucide="message-circle" id="btnIconOpen" class="h-6 w-6"></i>
+      <i data-lucide="x" id="btnIconClose" class="h-6 w-6 hidden"></i>
+    </button>
+
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script>
-    // Initialize icons and year
-    function renderIcons() { if (window.lucide) lucide.createIcons(); }
-    document.getElementById('year').textContent = new Date().getFullYear();
+    // Initialize icons
+    function renderIcons() {
+      if (window.lucide) lucide.createIcons();
+    }
     renderIcons();
 
-    // Custom budget select
-    const budgetBtn = document.getElementById('budgetBtn');
-    const budgetMenu = document.getElementById('budgetMenu');
-    const budgetLabel = document.getElementById('budgetLabel');
-    const budgetValue = document.getElementById('budgetValue');
-
-    budgetBtn.addEventListener('click', () => {
-      budgetMenu.classList.toggle('hidden');
-    });
-
-    budgetMenu.querySelectorAll('button[data-value]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const val = btn.getAttribute('data-value');
-        budgetValue.value = val;
-        budgetLabel.textContent = btn.innerText.trim().split('\n')[0];
-        budgetMenu.classList.add('hidden');
-      });
-    });
-
-    document.addEventListener('click', (e) => {
-      if (!budgetBtn.contains(e.target) && !budgetMenu.contains(e.target)) {
-        budgetMenu.classList.add('hidden');
+    // Client-side FAQ cache - instant answers without API calls
+    const FAQ_CACHE = {
+      "What is an escrow shortage?": {
+        answer: "Your escrow account exists to pay escrowed items (taxes, insurance, mortgage insurance, etc.) as they come due. **A shortage occurs when the analysis shows that the minimum required balance falls below the amount needed to make projected payments.**\n\nShortages are commonly caused by:\n- Increases in property taxes or insurance premiums\n- Changing your insurance carrier off-cycle\n- Underestimated taxes when you closed your loan\n\nFreedom Mortgage performs a regular analysis of your escrow account to ensure enough funds are available. If a shortage is identified, you'll receive an escrow analysis statement explaining your options.",
+        sources: ["Shortage (FAQ-1)"]
+      },
+      "Why did my payment change?": {
+        answer: "Your monthly mortgage payment may have changed due to your annual escrow analysis. Common reasons include:\n\n- **Property tax increase** – Your local tax authority raised your property taxes\n- **Insurance premium change** – Your homeowners insurance renewal came in higher or lower\n- **Escrow shortage** – Your account needs additional funds to cover upcoming expenses\n- **PMI adjustment** – Changes to your private mortgage insurance\n\nYour escrow analysis statement details exactly what changed and your new payment amount. If your taxes or insurance decreased significantly, you may request an off-cycle analysis by contacting Customer Care.",
+        sources: ["Payment (FAQ-10)", "Payment (FAQ-14)"]
+      },
+      "When will my PMI be removed?": {
+        answer: "For most conventional loans, **Private Mortgage Insurance (PMI) is automatically cancelled when your loan balance reaches 78% of the original home value**, based on your scheduled payments.\n\nYou may also **request cancellation when your balance reaches 80%** of the original value. To request removal:\n1. Submit a written request through your online account or contact Customer Care\n2. Your loan must be current with a good payment history\n3. An appraisal may be required to confirm your home's value\n\n**Note:** FHA loans have different rules – FHA Mortgage Insurance Premium (MIP) may be required for the life of the loan depending on your down payment and loan terms.",
+        sources: ["PMI (FAQ-15)", "PMI (FAQ-16)"]
+      },
+      "What is an escrow surplus?": {
+        answer: "An **escrow surplus** occurs when your escrow account has more funds than needed to pay your upcoming taxes, insurance, and other escrowed expenses, plus the required minimum balance.\n\nSurpluses can happen when:\n- Your property taxes or insurance premiums decrease\n- You made additional escrow payments\n- Previous estimates were higher than actual costs\n\n**What happens with a surplus:**\n- If the surplus is **$50 or more**, you'll receive a refund check within 30 days of your annual escrow analysis\n- If it's **less than $50**, it's typically applied to your escrow balance\n\nYou can check your surplus status in your online account or contact Customer Care.",
+        sources: ["Refund (FAQ-17)", "Status (FAQ-19)"]
+      },
+      "My insurance changed. What happens to my escrow?": {
+        answer: "If you've switched homeowners insurance carriers, here's what to do:\n\n1. **Upload your new policy** – Submit your new declarations page through your online account or mobile app\n2. **We'll update your escrow** – Once processed, your escrow account will reflect the new premium amount\n3. **Payment may adjust** – If your new premium is significantly different, this may trigger an escrow analysis to adjust your monthly payment\n\n**If you received a refund from your old insurance company:**\nYou can apply those funds to your escrow by mailing a check with your loan number (note \"Apply to Escrow\") or by contacting Customer Care to make a payment over the phone.",
+        sources: ["Insurance (FAQ-8)", "Insurance (FAQ-9)"]
       }
-    });
+    };
 
-    // Planner logic (calls backend)
-    const form = document.getElementById('plannerForm');
-    const results = document.getElementById('results');
-    const placeholderCard = document.getElementById('placeholderCard');
+    // FAQ toggle function
+    function toggleFaq(button) {
+      const faqItem = button.closest('.faq-item');
+      const answer = faqItem.querySelector('.faq-answer');
+      const isExpanded = faqItem.classList.contains('expanded');
 
-    async function submitToBackend(e) {
-      e.preventDefault();
+      if (isExpanded) {
+        faqItem.classList.remove('expanded');
+        answer.classList.add('hidden');
+      } else {
+        faqItem.classList.add('expanded');
+        answer.classList.remove('hidden');
+      }
+      renderIcons();
+    }
 
-      const destination = (document.getElementById('destination').value || '').trim();
-      const durationNum = Math.max(1, Math.min(30, parseInt(document.getElementById('duration').value || '0', 10)));
-      const duration = isFinite(durationNum) ? `${durationNum} days` : '3 days';
-      const budget = document.getElementById('budgetValue').value || 'moderate';
-      const interests = (document.getElementById('interests').value || '').trim();
+    // Widget state
+    let isWidgetOpen = false;
+    let conversationHistory = [];
 
-      if (!destination || !durationNum) {
-        alert('Please enter a destination and duration.');
+    // DOM elements
+    const chatWidget = document.getElementById('chatWidget');
+    const chatPanel = document.getElementById('chatPanel');
+    const chatWidgetBtn = document.getElementById('chatWidgetBtn');
+    const btnIconOpen = document.getElementById('btnIconOpen');
+    const btnIconClose = document.getElementById('btnIconClose');
+    const welcomeCard = document.getElementById('welcomeCard');
+    const chatContainer = document.getElementById('chatContainer');
+    const chatMessages = document.getElementById('chatMessages');
+    const chatForm = document.getElementById('chatForm');
+    const questionInput = document.getElementById('questionInput');
+    const sendButton = document.getElementById('sendButton');
+    const newChatBtn = document.getElementById('newChatBtn');
+
+    // Toggle widget open/close
+    function toggleWidget() {
+      isWidgetOpen = !isWidgetOpen;
+
+      if (isWidgetOpen) {
+        chatPanel.classList.add('open');
+        btnIconOpen.classList.add('hidden');
+        btnIconClose.classList.remove('hidden');
+        chatWidgetBtn.classList.add('bg-fm-primary');
+        chatWidgetBtn.classList.remove('bg-fm-secondary');
+        // Focus input when opening
+        setTimeout(() => questionInput.focus(), 300);
+      } else {
+        chatPanel.classList.remove('open');
+        btnIconOpen.classList.remove('hidden');
+        btnIconClose.classList.add('hidden');
+        chatWidgetBtn.classList.remove('bg-fm-primary');
+        chatWidgetBtn.classList.add('bg-fm-secondary');
+      }
+    }
+
+    // Close widget
+    function closeWidget() {
+      if (isWidgetOpen) {
+        toggleWidget();
+      }
+    }
+
+    // Reset chat and return to welcome screen
+    function resetChat() {
+      conversationHistory = [];
+      window.feedbackData = {};  // Clear feedback data
+      chatMessages.innerHTML = '';
+      chatContainer.classList.add('hidden');
+      welcomeCard.classList.remove('hidden');
+      newChatBtn.classList.add('hidden');
+      newChatBtn.classList.remove('inline-flex');
+      questionInput.value = '';
+      questionInput.focus();
+    }
+
+    // Ask question from quick buttons (uses cache for instant response)
+    function askQuestion(question) {
+      // Check if we have a cached answer for this exact question
+      const cached = FAQ_CACHE[question];
+      if (cached) {
+        // Show chat container, hide welcome card, show new chat button
+        welcomeCard.classList.add('hidden');
+        chatContainer.classList.remove('hidden');
+        newChatBtn.classList.remove('hidden');
+        newChatBtn.classList.add('inline-flex');
+
+        // Add user message
+        addMessage(question, true);
+
+        // Generate client-side messageId for cached responses
+        const messageId = `cache-${Date.now()}`;
+
+        // Simulate brief delay for natural feel, then show cached answer
+        setTimeout(() => {
+          addMessage(cached.answer, false, cached.sources, messageId, question);
+          conversationHistory.push({ role: 'user', content: question });
+          conversationHistory.push({ role: 'assistant', content: cached.answer, sources: cached.sources });
+        }, 300);
+
         return;
       }
 
-      placeholderCard.classList.add('hidden');
-      results.classList.remove('hidden');
-      results.innerHTML = `
-        <div class="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
-          <div class="flex items-center gap-3 text-neutral-700">
-            <i data-lucide="loader-2" class="h-5 w-5 animate-spin"></i>
-            Planning your itinerary...
+      // No cache hit - use API
+      questionInput.value = question;
+      submitQuestion(question);
+    }
+
+    // Add message to chat
+    function addMessage(content, isUser = false, sources = [], messageId = '', originalQuestion = '') {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message-enter flex gap-3 ${isUser ? 'justify-end' : ''}`;
+
+      if (isUser) {
+        messageDiv.innerHTML = `
+          <div class="max-w-[85%] rounded-2xl rounded-br-md bg-fm-primary text-white px-4 py-2.5 text-paragraph">
+            <p>${escapeHtml(content)}</p>
+          </div>
+        `;
+      } else {
+        const sourcesHtml = sources.length > 0
+          ? `<div class="mt-2 pt-2 border-t border-neutral-200">
+              <p class="text-xs text-neutral-400 flex items-center gap-1">
+                <i data-lucide="book-open" class="h-3 w-3"></i>
+                Sources: ${sources.join(', ')}
+              </p>
+            </div>`
+          : '';
+
+        const formattedContent = (window.marked && window.marked.parse)
+          ? window.marked.parse(content)
+          : `<p>${escapeHtml(content)}</p>`;
+
+        // Store feedback data in a global map to avoid escaping issues
+        const feedbackHtml = messageId ? (() => {
+          // Store data for this message
+          window.feedbackData = window.feedbackData || {};
+          window.feedbackData[messageId] = {
+            question: originalQuestion,
+            answer: content.substring(0, 500)
+          };
+          return `
+          <div class="mt-2 pt-2 border-t border-neutral-200 flex items-center gap-2">
+            <span class="text-xs text-neutral-400">Was this helpful?</span>
+            <button onclick="sendFeedback('${messageId}', 'positive', this)"
+                    class="feedback-btn p-1 rounded hover:bg-green-100 transition text-neutral-400 hover:text-green-600"
+                    title="Yes, helpful">
+              <i data-lucide="thumbs-up" class="h-3.5 w-3.5"></i>
+            </button>
+            <button onclick="sendFeedback('${messageId}', 'negative', this)"
+                    class="feedback-btn p-1 rounded hover:bg-red-100 transition text-neutral-400 hover:text-red-600"
+                    title="Not helpful">
+              <i data-lucide="thumbs-down" class="h-3.5 w-3.5"></i>
+            </button>
+          </div>
+        `;
+        })() : '';
+
+        messageDiv.innerHTML = `
+          <div class="flex-shrink-0 h-7 w-7 rounded-full bg-fm-teal-light flex items-center justify-center">
+            <i data-lucide="bot" class="h-4 w-4 text-fm-primary"></i>
+          </div>
+          <div class="max-w-[85%] rounded-2xl rounded-bl-md bg-fm-bg px-4 py-2.5 text-paragraph">
+            <div class="prose prose-sm max-w-none [&_p]:mb-2 [&_p:last-child]:mb-0 [&_ul]:mb-2 [&_ol]:mb-2">${formattedContent}</div>
+            ${sourcesHtml}
+            ${feedbackHtml}
+          </div>
+        `;
+      }
+
+      chatMessages.appendChild(messageDiv);
+      renderIcons();
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // Add typing indicator
+    function addTypingIndicator() {
+      const typingDiv = document.createElement('div');
+      typingDiv.id = 'typingIndicator';
+      typingDiv.className = 'message-enter flex gap-3';
+      typingDiv.innerHTML = `
+        <div class="flex-shrink-0 h-7 w-7 rounded-full bg-fm-teal-light flex items-center justify-center">
+          <i data-lucide="bot" class="h-4 w-4 text-fm-primary"></i>
+        </div>
+        <div class="rounded-2xl rounded-bl-md bg-fm-bg px-4 py-3">
+          <div class="typing-indicator flex gap-1">
+            <span class="h-2 w-2 bg-neutral-400 rounded-full"></span>
+            <span class="h-2 w-2 bg-neutral-400 rounded-full"></span>
+            <span class="h-2 w-2 bg-neutral-400 rounded-full"></span>
           </div>
         </div>
       `;
+      chatMessages.appendChild(typingDiv);
       renderIcons();
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
 
+    // Remove typing indicator
+    function removeTypingIndicator() {
+      const indicator = document.getElementById('typingIndicator');
+      if (indicator) indicator.remove();
+    }
+
+    // Escape HTML
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Send feedback to backend
+    async function sendFeedback(messageId, rating, btnElement) {
+      // Visual feedback - highlight selected button and disable both
+      const feedbackContainer = btnElement.parentElement;
+      const allBtns = feedbackContainer.querySelectorAll('.feedback-btn');
+
+      allBtns.forEach(btn => {
+        btn.disabled = true;
+        btn.classList.remove('hover:bg-green-100', 'hover:bg-red-100', 'hover:text-green-600', 'hover:text-red-600');
+        btn.classList.add('cursor-default');
+      });
+
+      if (rating === 'positive') {
+        btnElement.classList.remove('text-neutral-400');
+        btnElement.classList.add('text-green-600');
+      } else {
+        btnElement.classList.remove('text-neutral-400');
+        btnElement.classList.add('text-red-600');
+      }
+
+      // Update the help text
+      const helpText = feedbackContainer.querySelector('span');
+      if (helpText) {
+        helpText.textContent = 'Thanks for the feedback!';
+      }
+
+      // Get question/answer from stored data
+      const data = (window.feedbackData && window.feedbackData[messageId]) || {};
+
+      // Send to backend
       try {
-        const resp = await fetch('/plan-trip', {
+        await fetch('/feedback', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ destination, duration, budget, interests })
+          body: JSON.stringify({
+            message_id: messageId,
+            question: data.question || '',
+            answer: data.answer || '',
+            rating: rating
+          })
+        });
+      } catch (err) {
+        console.error('Feedback error:', err);
+      }
+    }
+
+    // Submit question to backend
+    async function submitQuestion(question) {
+      if (!question.trim()) return;
+
+      // Show chat container, hide welcome card, show new chat button
+      welcomeCard.classList.add('hidden');
+      chatContainer.classList.remove('hidden');
+      newChatBtn.classList.remove('hidden');
+      newChatBtn.classList.add('inline-flex');
+
+      // Add user message
+      addMessage(question, true);
+
+      // Clear input and disable form
+      questionInput.value = '';
+      sendButton.disabled = true;
+      questionInput.disabled = true;
+
+      // Show typing indicator
+      addTypingIndicator();
+
+      try {
+        const resp = await fetch('/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            question,
+            conversation_history: conversationHistory.slice(-6)  // Last 3 turns
+          })
         });
 
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const data = await resp.json();
-        const md = (data && data.result) ? data.result : 'No result';
 
-        const content = (window.marked && window.marked.parse) ? window.marked.parse(md) : `<pre class="whitespace-pre-wrap">${md}</pre>`;
-        results.innerHTML = `
-          <div class="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
-            <div class="mb-3 flex items-center justify-between">
-              <h3 class="text-xl font-semibold tracking-tight">Your Itinerary</h3>
-              <button id="printBtn" class="inline-flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm hover:bg-neutral-50">
-                <i data-lucide="printer" class="h-4 w-4"></i> Print / PDF
-              </button>
-            </div>
-            <div class="prose max-w-none">${content}</div>
-          </div>
-        `;
-        renderIcons();
-        const printBtn = document.getElementById('printBtn');
-        printBtn?.addEventListener('click', () => window.print());
+        // Remove typing indicator
+        removeTypingIndicator();
+
+        // Add assistant response
+        const answer = data.answer || "I'm sorry, I couldn't find an answer to that question.";
+        const sources = data.sources || [];
+        const messageId = data.message_id || `msg-${Date.now()}`;
+        addMessage(answer, false, sources, messageId, question);
+
+        // Store in conversation history
+        conversationHistory.push({ role: 'user', content: question });
+        conversationHistory.push({ role: 'assistant', content: answer, sources });
+
       } catch (err) {
-        results.innerHTML = `
-          <div class="rounded-xl border border-red-200 bg-red-50 p-6 text-red-700">
-            <div class="flex items-center gap-2">
-              <i data-lucide="alert-triangle" class="h-5 w-5"></i>
-              <span>Failed to plan trip. Please try again.</span>
-            </div>
-          </div>
-        `;
-        renderIcons();
-        console.error('Plan error:', err);
+        removeTypingIndicator();
+        addMessage("I'm sorry, something went wrong. Please try again or call 1-800-220-3000.", false);
+        console.error('Error:', err);
+      } finally {
+        // Re-enable form
+        sendButton.disabled = false;
+        questionInput.disabled = false;
+        questionInput.focus();
       }
     }
 
-    form.addEventListener('submit', submitToBackend);
+    // Form submission handler
+    chatForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const question = questionInput.value.trim();
+      if (question) {
+        submitQuestion(question);
+      }
+    });
+
+    // Close widget on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && isWidgetOpen) {
+        closeWidget();
+      }
+    });
   </script>
 </body>
 </html>

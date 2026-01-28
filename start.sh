@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# Trip Planner Startup Script
+# Escrow Assistant Startup Script
 
-echo "🚀 Starting AI Trip Planner..."
+echo "🚀 Starting Escrow Assistant..."
 
 # Check if we're in the right directory
 if [ ! -d "backend" ] || [ ! -d "frontend" ]; then
-    echo "❌ Error: Please run this script from the trip_planner directory"
+    echo "❌ Error: Please run this script from the escrow-assistant directory"
     exit 1
 fi
 

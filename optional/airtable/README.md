@@ -5,9 +5,9 @@ Optional Airtable Integration
 - Env (add to `backend/.env`):
   - `AIRTABLE_API_KEY=...`
   - `AIRTABLE_BASE_ID=...`
-  - `AIRTABLE_TABLE_NAME=trip_planner_traces` (optional)
+  - `AIRTABLE_TABLE_NAME=escrow_assistant_traces` (optional)
 
 Usage
 - Import and use in a custom route or workflow to log requests/responses for manual labeling.
-- Not required for core trip planning; safe to ignore in production.
+- Not required for core escrow assistant; safe to ignore in production.
 

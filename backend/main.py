@@ -6,6 +6,7 @@ from typing import Optional, List, Dict, Any
 import os
 import time
 import json
+import uuid
 from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv, find_dotenv
@@ -42,33 +43,40 @@ except Exception:
 
 # LangGraph + LangChain
 from langgraph.graph import StateGraph, END, START
-from langgraph.prebuilt import ToolNode
 from typing_extensions import TypedDict, Annotated
 import operator
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
-from langchain_core.tools import tool
 from langchain_core.documents import Document
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_community.vectorstores import InMemoryVectorStore
-import httpx
 
 
-class TripRequest(BaseModel):
-    destination: str
-    duration: str
-    budget: Optional[str] = None
-    interests: Optional[str] = None
-    travel_style: Optional[str] = None
-    # Optional fields for enhanced session tracking and observability
-    user_input: Optional[str] = None
+# Data Models for Escrow Assistant
+class ConversationMessage(BaseModel):
+    role: str  # 'user' or 'assistant'
+    content: str
+
+
+class EscrowQuery(BaseModel):
+    question: str
+    conversation_history: Optional[List[ConversationMessage]] = []
     session_id: Optional[str] = None
     user_id: Optional[str] = None
-    turn_index: Optional[int] = None
 
 
-class TripResponse(BaseModel):
-    result: str
-    tool_calls: List[Dict[str, Any]] = []
+class EscrowResponse(BaseModel):
+    answer: str
+    sources: List[str] = []
+    confidence: Optional[str] = None
+    message_id: str = ""
+
+
+class FeedbackRequest(BaseModel):
+    message_id: str
+    question: str
+    answer: str
+    rating: str  # 'positive' or 'negative'
+    session_id: Optional[str] = None
 
 
 def _init_llm():
@@ -80,7 +88,7 @@ def _init_llm():
             return self
         def invoke(self, messages):
             class _Msg:
-                content = "Test itinerary"
+                content = "I can help you with escrow questions."
                 tool_calls: List[Dict[str, Any]] = []
             return _Msg()
 
@@ -104,13 +112,32 @@ def _init_llm():
 llm = _init_llm()
 
 
-# Feature flag for optional RAG demo (opt-in for learning)
-ENABLE_RAG = os.getenv("ENABLE_RAG", "0").lower() not in {"0", "false", "no"}
+# Feature flag for RAG (enabled by default for escrow assistant)
+ENABLE_RAG = os.getenv("ENABLE_RAG", "1").lower() not in {"0", "false", "no"}
 
 
-# RAG helper: Load curated local guides as LangChain documents
-def _load_local_documents(path: Path) -> List[Document]:
-    """Load local guides JSON and convert to LangChain Documents."""
+# Escrow System Prompt
+ESCROW_SYSTEM_PROMPT = """You are an Escrow Assistant for Freedom Mortgage customers. Your role is to answer questions about escrow accounts, shortages, surpluses, insurance, taxes, PMI, and payment changes.
+
+Guidelines:
+- Be helpful, clear, and concise
+- Use the knowledge base to answer questions accurately
+- If a question is outside your knowledge base, acknowledge the limitation and suggest contacting Customer Care at 1-800-220-3000
+- Never make up information about specific account details, balances, or dates
+- Be empathetic - escrow can be confusing for customers
+
+Topics you can help with:
+- Escrow shortages and how to pay them
+- Insurance changes and refunds
+- Payment changes after escrow analysis
+- PMI removal requests
+- Escrow balance and disbursement questions
+- Refund and surplus check status"""
+
+
+# RAG helper: Load escrow FAQs as LangChain documents
+def _load_faq_documents(path: Path) -> List[Document]:
+    """Load escrow FAQs JSON and convert to LangChain Documents."""
     if not path.exists():
         return []
     try:
@@ -119,43 +146,43 @@ def _load_local_documents(path: Path) -> List[Document]:
         return []
 
     docs: List[Document] = []
-    for row in raw:
-        description = row.get("description")
-        city = row.get("city")
-        if not description or not city:
+    for faq in raw:
+        question = faq.get("question", "")
+        answer = faq.get("answer", "")
+        if not question or not answer:
             continue
-        interests = row.get("interests", []) or []
+
+        # Combine question and answer for better retrieval
+        content = f"Question: {question}\nAnswer: {answer}"
+
         metadata = {
-            "city": city,
-            "interests": interests,
-            "source": row.get("source"),
+            "id": faq.get("id", ""),
+            "category": faq.get("category", ""),
+            "keywords": faq.get("keywords", []),
         }
-        # Prefix city + interests in content so embeddings capture location context
-        interest_text = ", ".join(interests) if interests else "general travel"
-        content = f"City: {city}\nInterests: {interest_text}\nGuide: {description}"
         docs.append(Document(page_content=content, metadata=metadata))
     return docs
 
 
-class LocalGuideRetriever:
-    """Retrieves curated local experiences using vector similarity search.
-    
-    This class demonstrates production RAG patterns for students:
+class EscrowFAQRetriever:
+    """Retrieves escrow FAQs using vector similarity search.
+
+    This class implements RAG patterns for the escrow knowledge base:
     - Vector embeddings for semantic search
     - Fallback to keyword matching when embeddings unavailable
     - Graceful degradation with feature flags
     """
-    
+
     def __init__(self, data_path: Path):
-        """Initialize retriever with local guides data.
-        
+        """Initialize retriever with escrow FAQ data.
+
         Args:
-            data_path: Path to local_guides.json file
+            data_path: Path to escrow_faqs.json file
         """
-        self._docs = _load_local_documents(data_path)
+        self._docs = _load_faq_documents(data_path)
         self._embeddings: Optional[OpenAIEmbeddings] = None
         self._vectorstore: Optional[InMemoryVectorStore] = None
-        
+
         # Only create embeddings when RAG is enabled and we have an API key
         if ENABLE_RAG and self._docs and not os.getenv("TEST_MODE"):
             try:
@@ -174,14 +201,13 @@ class LocalGuideRetriever:
         """Check if any documents were loaded."""
         return not self._docs
 
-    def retrieve(self, destination: str, interests: Optional[str], *, k: int = 3) -> List[Dict[str, Any]]:
-        """Retrieve top-k relevant local guides for a destination.
-        
+    def retrieve(self, query: str, *, k: int = 3) -> List[Dict[str, Any]]:
+        """Retrieve top-k relevant FAQs for a question.
+
         Args:
-            destination: City or destination name
-            interests: Comma-separated interests (e.g., "food, art")
+            query: User's question
             k: Number of results to return
-            
+
         Returns:
             List of dicts with 'content', 'metadata', and 'score' keys
         """
@@ -190,18 +216,14 @@ class LocalGuideRetriever:
 
         # Use vector search if available, otherwise fall back to keywords
         if not self._vectorstore:
-            return self._keyword_fallback(destination, interests, k=k)
+            return self._keyword_fallback(query, k=k)
 
-        query = destination
-        if interests:
-            query = f"{destination} with interests {interests}"
-        
         try:
             # LangChain retriever ensures embeddings + searches are traced
             retriever = self._vectorstore.as_retriever(search_kwargs={"k": max(k, 4)})
             docs = retriever.invoke(query)
         except Exception:
-            return self._keyword_fallback(destination, interests, k=k)
+            return self._keyword_fallback(query, k=k)
 
         # Format results with metadata and scores
         top_docs = docs[:k]
@@ -219,36 +241,43 @@ class LocalGuideRetriever:
             })
 
         if not results:
-            return self._keyword_fallback(destination, interests, k=k)
+            return self._keyword_fallback(query, k=k)
         return results
 
-    def _keyword_fallback(self, destination: str, interests: Optional[str], *, k: int) -> List[Dict[str, Any]]:
+    def _keyword_fallback(self, query: str, *, k: int) -> List[Dict[str, Any]]:
         """Simple keyword-based retrieval when embeddings unavailable.
-        
-        This demonstrates graceful degradation for students learning about
-        fallback strategies in production systems.
+
+        This demonstrates graceful degradation for production systems.
         """
-        dest_lower = destination.lower()
-        interest_terms = [part.strip().lower() for part in (interests or "").split(",") if part.strip()]
+        query_lower = query.lower()
+        query_terms = query_lower.split()
 
         def _score(doc: Document) -> int:
             score = 0
-            city_match = doc.metadata.get("city", "").lower()
-            # Match city name
-            if dest_lower and dest_lower.split(",")[0] in city_match:
+            content_lower = doc.page_content.lower()
+
+            # Match keywords from metadata
+            keywords = doc.metadata.get("keywords", [])
+            for keyword in keywords:
+                if keyword.lower() in query_lower:
+                    score += 3
+
+            # Match category
+            category = doc.metadata.get("category", "").lower()
+            if category and category in query_lower:
                 score += 2
-            # Match interests
-            for term in interest_terms:
-                if term and term in " ".join(doc.metadata.get("interests") or []).lower():
+
+            # Match individual query terms in content
+            for term in query_terms:
+                if len(term) > 2 and term in content_lower:
                     score += 1
-                if term and term in doc.page_content.lower():
-                    score += 1
+
             return score
 
         scored_docs = [(_score(doc), doc) for doc in self._docs]
         scored_docs.sort(key=lambda item: item[0], reverse=True)
         top_docs = scored_docs[:k]
-        
+
         results = []
         for score, doc in top_docs:
             if score > 0:
@@ -262,524 +291,113 @@ class LocalGuideRetriever:
 
 # Initialize retriever at module level (loads data once at startup)
 _DATA_DIR = Path(__file__).parent / "data"
-GUIDE_RETRIEVER = LocalGuideRetriever(_DATA_DIR / "local_guides.json")
+FAQ_RETRIEVER = EscrowFAQRetriever(_DATA_DIR / "escrow_faqs.json")
 
 
-# Search API configuration and helpers
-SEARCH_TIMEOUT = 10.0  # seconds
+def format_retrieved_faqs(faqs: List[Dict[str, Any]]) -> str:
+    """Format retrieved FAQs as context for the LLM."""
+    if not faqs:
+        return "No relevant FAQs found in the knowledge base."
+
+    lines = []
+    for idx, faq in enumerate(faqs, 1):
+        content = faq["content"]
+        category = faq["metadata"].get("category", "General")
+        lines.append(f"[{idx}] Category: {category}")
+        lines.append(content)
+        lines.append("")
+
+    return "\n".join(lines)
 
 
-def _compact(text: str, limit: int = 200) -> str:
-    """Compact text to a maximum length, truncating at word boundaries."""
-    if not text:
+# Escrow Agent State
+class EscrowState(TypedDict):
+    question: str
+    conversation_history: List[dict]
+    context: Optional[str]
+    answer: Optional[str]
+    sources: List[str]
+
+
+def format_conversation_history(history: List[dict], max_turns: int = 3) -> str:
+    """Format recent conversation turns for LLM context."""
+    if not history:
         return ""
-    cleaned = " ".join(text.split())
-    if len(cleaned) <= limit:
-        return cleaned
-    truncated = cleaned[:limit]
-    last_space = truncated.rfind(" ")
-    if last_space > 0:
-        truncated = truncated[:last_space]
-    return truncated.rstrip(",.;- ")
+
+    recent = history[-(max_turns * 2):]  # Last N turns (user + assistant pairs)
+    lines = ["Previous conversation:"]
+    for msg in recent:
+        role = "Customer" if msg["role"] == "user" else "Assistant"
+        lines.append(f"{role}: {msg['content'][:500]}")  # Truncate long messages
+    return "\n".join(lines)
 
 
-def _search_api(query: str) -> Optional[str]:
-    """Search the web using Tavily or SerpAPI if configured, return None otherwise.
-    
-    This demonstrates graceful degradation: tools work with or without API keys.
-    Students can enable real search by adding TAVILY_API_KEY or SERPAPI_API_KEY.
-    """
-    query = query.strip()
-    if not query:
-        return None
+def escrow_agent(state: EscrowState) -> EscrowState:
+    """Single agent that handles escrow questions using RAG."""
+    question = state["question"]
+    conversation_history = state.get("conversation_history", [])
 
-    # Try Tavily first (recommended for AI apps)
-    tavily_key = os.getenv("TAVILY_API_KEY")
-    if tavily_key:
-        try:
-            with httpx.Client(timeout=SEARCH_TIMEOUT) as client:
-                resp = client.post(
-                    "https://api.tavily.com/search",
-                    json={
-                        "api_key": tavily_key,
-                        "query": query,
-                        "max_results": 3,
-                        "search_depth": "basic",
-                        "include_answer": True,
-                    },
-                )
-                resp.raise_for_status()
-                data = resp.json()
-                answer = data.get("answer") or ""
-                snippets = [
-                    item.get("content") or item.get("snippet") or ""
-                    for item in data.get("results", [])
-                ]
-                combined = " ".join([answer] + snippets).strip()
-                if combined:
-                    return _compact(combined)
-        except Exception:
-            pass  # Fail gracefully, try next option
+    # RAG retrieval
+    retrieved_faqs = FAQ_RETRIEVER.retrieve(question, k=3)
+    context = format_retrieved_faqs(retrieved_faqs)
 
-    # Try SerpAPI as fallback
-    serp_key = os.getenv("SERPAPI_API_KEY")
-    if serp_key:
-        try:
-            with httpx.Client(timeout=SEARCH_TIMEOUT) as client:
-                resp = client.get(
-                    "https://serpapi.com/search",
-                    params={
-                        "api_key": serp_key,
-                        "engine": "google",
-                        "num": 5,
-                        "q": query,
-                    },
-                )
-                resp.raise_for_status()
-                data = resp.json()
-                organic = data.get("organic_results", [])
-                snippets = [item.get("snippet", "") for item in organic]
-                combined = " ".join(snippets).strip()
-                if combined:
-                    return _compact(combined)
-        except Exception:
-            pass  # Fail gracefully
+    # Extract sources from retrieved FAQs
+    sources = []
+    for faq in retrieved_faqs:
+        faq_id = faq["metadata"].get("id", "")
+        category = faq["metadata"].get("category", "")
+        if faq_id and category:
+            sources.append(f"{category} ({faq_id})")
 
-    return None  # No search APIs configured
+    # Format conversation history for context
+    history_context = format_conversation_history(conversation_history)
 
+    # Build prompt with context and history
+    user_prompt_parts = []
+    if history_context:
+        user_prompt_parts.append(history_context)
+    user_prompt_parts.append(f"Relevant FAQs:\n{context}")
+    user_prompt_parts.append(f"Customer Question: {question}")
 
-def _llm_fallback(instruction: str, context: Optional[str] = None) -> str:
-    """Use the LLM to generate a response when search APIs aren't available.
-    
-    This ensures tools always return useful information, even without API keys.
-    """
-    prompt = "Respond with 200 characters or less.\n" + instruction.strip()
-    if context:
-        prompt += "\nContext:\n" + context.strip()
-    response = llm.invoke([
-        SystemMessage(content="You are a concise travel assistant."),
-        HumanMessage(content=prompt),
-    ])
-    return _compact(response.content)
+    user_prompt = "\n\n".join(user_prompt_parts)
 
-
-def _with_prefix(prefix: str, summary: str) -> str:
-    """Add a prefix to a summary for clarity."""
-    text = f"{prefix}: {summary}" if prefix else summary
-    return _compact(text)
-
-
-# Tools with real API calls + LLM fallback (graceful degradation pattern)
-@tool
-def essential_info(destination: str) -> str:
-    """Return essential destination info like weather, sights, and etiquette."""
-    query = f"{destination} travel essentials weather best time top attractions etiquette language currency safety"
-    summary = _search_api(query)
-    if summary:
-        return _with_prefix(f"{destination} essentials", summary)
-    
-    # LLM fallback when no search API is configured
-    instruction = f"Summarize the climate, best visit time, standout sights, customs, language, currency, and safety tips for {destination}."
-    return _llm_fallback(instruction)
-
-
-@tool
-def budget_basics(destination: str, duration: str) -> str:
-    """Return high-level budget categories for a given destination and duration."""
-    query = f"{destination} travel budget average daily costs {duration}"
-    summary = _search_api(query)
-    if summary:
-        return _with_prefix(f"{destination} budget {duration}", summary)
-    
-    instruction = f"Outline lodging, meals, transport, activities, and extra costs for a {duration} trip to {destination}."
-    return _llm_fallback(instruction)
-
-
-@tool
-def local_flavor(destination: str, interests: Optional[str] = None) -> str:
-    """Suggest authentic local experiences matching optional interests."""
-    focus = interests or "local culture"
-    query = f"{destination} authentic local experiences {focus}"
-    summary = _search_api(query)
-    if summary:
-        return _with_prefix(f"{destination} {focus}", summary)
-    
-    instruction = f"Recommend authentic local experiences in {destination} that highlight {focus}."
-    return _llm_fallback(instruction)
-
-
-@tool
-def day_plan(destination: str, day: int) -> str:
-    """Return a simple day plan outline for a specific day number."""
-    query = f"{destination} day {day} itinerary highlights"
-    summary = _search_api(query)
-    if summary:
-        return _with_prefix(f"Day {day} in {destination}", summary)
-    
-    instruction = f"Outline key activities for day {day} in {destination}, covering morning, afternoon, and evening."
-    return _llm_fallback(instruction)
-
-
-# Additional simple tools per agent (to mirror original multi-tool behavior)
-@tool
-def weather_brief(destination: str) -> str:
-    """Return a brief weather summary for planning purposes."""
-    query = f"{destination} weather forecast travel season temperatures rainfall"
-    summary = _search_api(query)
-    if summary:
-        return _with_prefix(f"{destination} weather", summary)
-    
-    instruction = f"Give a weather brief for {destination} noting season, temperatures, rainfall, humidity, and packing guidance."
-    return _llm_fallback(instruction)
-
-
-@tool
-def visa_brief(destination: str) -> str:
-    """Return a brief visa guidance for travel planning."""
-    query = f"{destination} tourist visa requirements entry rules"
-    summary = _search_api(query)
-    if summary:
-        return _with_prefix(f"{destination} visa", summary)
-    
-    instruction = f"Provide a visa guidance summary for visiting {destination}, including advice to confirm with the relevant embassy."
-    return _llm_fallback(instruction)
-
-
-@tool
-def attraction_prices(destination: str, attractions: Optional[List[str]] = None) -> str:
-    """Return pricing information for attractions."""
-    items = attractions or ["popular attractions"]
-    focus = ", ".join(items)
-    query = f"{destination} attraction ticket prices {focus}"
-    summary = _search_api(query)
-    if summary:
-        return _with_prefix(f"{destination} attraction prices", summary)
-    
-    instruction = f"Share typical ticket prices and savings tips for attractions such as {focus} in {destination}."
-    return _llm_fallback(instruction)
-
-
-@tool
-def local_customs(destination: str) -> str:
-    """Return cultural etiquette and customs information."""
-    query = f"{destination} cultural etiquette travel customs"
-    summary = _search_api(query)
-    if summary:
-        return _with_prefix(f"{destination} customs", summary)
-    
-    instruction = f"Summarize key etiquette and cultural customs travelers should know before visiting {destination}."
-    return _llm_fallback(instruction)
-
-
-@tool
-def hidden_gems(destination: str) -> str:
-    """Return lesser-known attractions and experiences."""
-    query = f"{destination} hidden gems local secrets lesser known spots"
-    summary = _search_api(query)
-    if summary:
-        return _with_prefix(f"{destination} hidden gems", summary)
-    
-    instruction = f"List lesser-known attractions or experiences that feel like hidden gems in {destination}."
-    return _llm_fallback(instruction)
-
-
-@tool
-def travel_time(from_location: str, to_location: str, mode: str = "public") -> str:
-    """Return travel time estimates between locations."""
-    query = f"travel time {from_location} to {to_location} by {mode}"
-    summary = _search_api(query)
-    if summary:
-        return _with_prefix(f"{from_location}→{to_location} {mode}", summary)
-    
-    instruction = f"Estimate travel time from {from_location} to {to_location} by {mode} transport."
-    return _llm_fallback(instruction)
-
-
-@tool
-def packing_list(destination: str, duration: str, activities: Optional[List[str]] = None) -> str:
-    """Return packing recommendations for the trip."""
-    acts = ", ".join(activities or ["sightseeing"])
-    query = f"what to pack for {destination} {duration} {acts}"
-    summary = _search_api(query)
-    if summary:
-        return _with_prefix(f"{destination} packing", summary)
-    
-    instruction = f"Suggest packing essentials for a {duration} trip to {destination} focused on {acts}."
-    return _llm_fallback(instruction)
-
-
-class TripState(TypedDict):
-    messages: Annotated[List[BaseMessage], operator.add]
-    trip_request: Dict[str, Any]
-    research: Optional[str]
-    budget: Optional[str]
-    local: Optional[str]
-    final: Optional[str]
-    tool_calls: Annotated[List[Dict[str, Any]], operator.add]
-
-
-def research_agent(state: TripState) -> TripState:
-    req = state["trip_request"]
-    destination = req["destination"]
-    prompt_t = (
-        "You are a research assistant.\n"
-        "Gather essential information about {destination}.\n"
-        "Use tools to get weather, visa, and essential info, then summarize."
-    )
-    vars_ = {"destination": destination}
-    
-    messages = [SystemMessage(content=prompt_t.format(**vars_))]
-    tools = [essential_info, weather_brief, visa_brief]
-    agent = llm.bind_tools(tools)
-    
-    calls: List[Dict[str, Any]] = []
-    tool_results = []
-    
     # Agent metadata and prompt template instrumentation
-    with using_attributes(tags=["research", "info_gathering"]):
+    with using_attributes(tags=["escrow", "faq_assistant"]):
         if _TRACING:
             current_span = trace.get_current_span()
             if current_span:
-                current_span.set_attribute("metadata.agent_type", "research")
-                current_span.set_attribute("metadata.agent_node", "research_agent")
-        
-        with using_prompt_template(template=prompt_t, variables=vars_, version="v1"):
-            res = agent.invoke(messages)
-    
-    # Collect tool calls and execute them
-    if getattr(res, "tool_calls", None):
-        for c in res.tool_calls:
-            calls.append({"agent": "research", "tool": c["name"], "args": c.get("args", {})})
-        
-        tool_node = ToolNode(tools)
-        tr = tool_node.invoke({"messages": [res]})
-        tool_results = tr["messages"]
-        
-        # Add tool results to conversation and ask LLM to synthesize
-        messages.append(res)
-        messages.extend(tool_results)
-        
-        synthesis_prompt = "Based on the above information, provide a comprehensive summary for the traveler."
-        messages.append(SystemMessage(content=synthesis_prompt))
-        
-        # Instrument synthesis LLM call with its own prompt template
-        synthesis_vars = {"destination": destination, "context": "tool_results"}
-        with using_prompt_template(template=synthesis_prompt, variables=synthesis_vars, version="v1-synthesis"):
-            final_res = llm.invoke(messages)
-        out = final_res.content
-    else:
-        out = res.content
+                current_span.set_attribute("metadata.agent_type", "escrow")
+                current_span.set_attribute("metadata.rag_enabled", str(ENABLE_RAG))
+                current_span.set_attribute("metadata.faqs_retrieved", len(retrieved_faqs))
+                current_span.set_attribute("metadata.history_turns", len(conversation_history) // 2)
 
-    return {"messages": [SystemMessage(content=out)], "research": out, "tool_calls": calls}
+        response = llm.invoke([
+            SystemMessage(content=ESCROW_SYSTEM_PROMPT),
+            HumanMessage(content=user_prompt)
+        ])
 
-
-def budget_agent(state: TripState) -> TripState:
-    req = state["trip_request"]
-    destination, duration = req["destination"], req["duration"]
-    budget = req.get("budget", "moderate")
-    prompt_t = (
-        "You are a budget analyst.\n"
-        "Analyze costs for {destination} over {duration} with budget: {budget}.\n"
-        "Use tools to get pricing information, then provide a detailed breakdown."
-    )
-    vars_ = {"destination": destination, "duration": duration, "budget": budget}
-    
-    messages = [SystemMessage(content=prompt_t.format(**vars_))]
-    tools = [budget_basics, attraction_prices]
-    agent = llm.bind_tools(tools)
-    
-    calls: List[Dict[str, Any]] = []
-    
-    # Agent metadata and prompt template instrumentation
-    with using_attributes(tags=["budget", "cost_analysis"]):
-        if _TRACING:
-            current_span = trace.get_current_span()
-            if current_span:
-                current_span.set_attribute("metadata.agent_type", "budget")
-                current_span.set_attribute("metadata.agent_node", "budget_agent")
-        
-        with using_prompt_template(template=prompt_t, variables=vars_, version="v1"):
-            res = agent.invoke(messages)
-    
-    if getattr(res, "tool_calls", None):
-        for c in res.tool_calls:
-            calls.append({"agent": "budget", "tool": c["name"], "args": c.get("args", {})})
-        
-        tool_node = ToolNode(tools)
-        tr = tool_node.invoke({"messages": [res]})
-        
-        # Add tool results and ask for synthesis
-        messages.append(res)
-        messages.extend(tr["messages"])
-        
-        synthesis_prompt = f"Create a detailed budget breakdown for {duration} in {destination} with a {budget} budget."
-        messages.append(SystemMessage(content=synthesis_prompt))
-        
-        # Instrument synthesis LLM call
-        synthesis_vars = {"duration": duration, "destination": destination, "budget": budget}
-        with using_prompt_template(template=synthesis_prompt, variables=synthesis_vars, version="v1-synthesis"):
-            final_res = llm.invoke(messages)
-        out = final_res.content
-    else:
-        out = res.content
-
-    return {"messages": [SystemMessage(content=out)], "budget": out, "tool_calls": calls}
-
-
-def local_agent(state: TripState) -> TripState:
-    req = state["trip_request"]
-    destination = req["destination"]
-    interests = req.get("interests", "local culture")
-    travel_style = req.get("travel_style", "standard")
-    
-    # RAG: Retrieve curated local guides if enabled
-    context_lines = []
-    if ENABLE_RAG:
-        retrieved = GUIDE_RETRIEVER.retrieve(destination, interests, k=3)
-        if retrieved:
-            context_lines.append("=== Curated Local Guides (from database) ===")
-            for idx, item in enumerate(retrieved, 1):
-                content = item["content"]
-                source = item["metadata"].get("source", "Unknown")
-                context_lines.append(f"{idx}. {content}")
-                context_lines.append(f"   Source: {source}")
-            context_lines.append("=== End of Curated Guides ===\n")
-    
-    context_text = "\n".join(context_lines) if context_lines else ""
-    
-    prompt_t = (
-        "You are a local guide.\n"
-        "Find authentic experiences in {destination} for someone interested in: {interests}.\n"
-        "Travel style: {travel_style}. Use tools to gather local insights.\n"
-    )
-    
-    # Add retrieved context to prompt if available
-    if context_text:
-        prompt_t += "\nRelevant curated experiences from our database:\n{context}\n"
-    
-    vars_ = {
-        "destination": destination,
-        "interests": interests,
-        "travel_style": travel_style,
-        "context": context_text if context_text else "No curated context available.",
+    return {
+        "question": question,
+        "conversation_history": conversation_history,
+        "context": context,
+        "answer": response.content,
+        "sources": sources,
     }
-    
-    messages = [SystemMessage(content=prompt_t.format(**vars_))]
-    tools = [local_flavor, local_customs, hidden_gems]
-    agent = llm.bind_tools(tools)
-    
-    calls: List[Dict[str, Any]] = []
-    
-    # Agent metadata and prompt template instrumentation
-    with using_attributes(tags=["local", "local_experiences"]):
-        if _TRACING:
-            current_span = trace.get_current_span()
-            if current_span:
-                current_span.set_attribute("metadata.agent_type", "local")
-                current_span.set_attribute("metadata.agent_node", "local_agent")
-                if ENABLE_RAG and context_text:
-                    current_span.set_attribute("metadata.rag_enabled", "true")
-        
-        with using_prompt_template(template=prompt_t, variables=vars_, version="v1"):
-            res = agent.invoke(messages)
-    
-    if getattr(res, "tool_calls", None):
-        for c in res.tool_calls:
-            calls.append({"agent": "local", "tool": c["name"], "args": c.get("args", {})})
-        
-        tool_node = ToolNode(tools)
-        tr = tool_node.invoke({"messages": [res]})
-        
-        # Add tool results and ask for synthesis
-        messages.append(res)
-        messages.extend(tr["messages"])
-        
-        synthesis_prompt = f"Create a curated list of authentic experiences for someone interested in {interests} with a {travel_style} approach."
-        messages.append(SystemMessage(content=synthesis_prompt))
-        
-        # Instrument synthesis LLM call
-        synthesis_vars = {"interests": interests, "travel_style": travel_style, "destination": destination}
-        with using_prompt_template(template=synthesis_prompt, variables=synthesis_vars, version="v1-synthesis"):
-            final_res = llm.invoke(messages)
-        out = final_res.content
-    else:
-        out = res.content
-
-    return {"messages": [SystemMessage(content=out)], "local": out, "tool_calls": calls}
-
-
-def itinerary_agent(state: TripState) -> TripState:
-    req = state["trip_request"]
-    destination = req["destination"]
-    duration = req["duration"]
-    travel_style = req.get("travel_style", "standard")
-    user_input = (req.get("user_input") or "").strip()
-    
-    prompt_parts = [
-        "Create a {duration} itinerary for {destination} ({travel_style}).",
-        "",
-        "Inputs:",
-        "Research: {research}",
-        "Budget: {budget}",
-        "Local: {local}",
-    ]
-    if user_input:
-        prompt_parts.append("User input: {user_input}")
-    
-    prompt_t = "\n".join(prompt_parts)
-    vars_ = {
-        "duration": duration,
-        "destination": destination,
-        "travel_style": travel_style,
-        "research": (state.get("research") or "")[:400],
-        "budget": (state.get("budget") or "")[:400],
-        "local": (state.get("local") or "")[:400],
-        "user_input": user_input,
-    }
-    
-    # Add span attributes for better observability in Arize
-    # NOTE: using_attributes must be OUTER context for proper propagation
-    with using_attributes(tags=["itinerary", "final_agent"]):
-        if _TRACING:
-            current_span = trace.get_current_span()
-            if current_span:
-                current_span.set_attribute("metadata.itinerary", "true")
-                current_span.set_attribute("metadata.agent_type", "itinerary")
-                current_span.set_attribute("metadata.agent_node", "itinerary_agent")
-                if user_input:
-                    current_span.set_attribute("metadata.user_input", user_input)
-        
-        # Prompt template wrapper for Arize Playground integration
-        with using_prompt_template(template=prompt_t, variables=vars_, version="v1"):
-            res = llm.invoke([SystemMessage(content=prompt_t.format(**vars_))])
-    
-    return {"messages": [SystemMessage(content=res.content)], "final": res.content}
 
 
 def build_graph():
-    g = StateGraph(TripState)
-    g.add_node("research_node", research_agent)
-    g.add_node("budget_node", budget_agent)
-    g.add_node("local_node", local_agent)
-    g.add_node("itinerary_node", itinerary_agent)
+    """Build simplified single-node workflow for escrow assistant."""
+    g = StateGraph(EscrowState)
+    g.add_node("escrow_agent", escrow_agent)
 
-    # Run research, budget, and local agents in parallel
-    g.add_edge(START, "research_node")
-    g.add_edge(START, "budget_node")
-    g.add_edge(START, "local_node")
-    
-    # All three agents feed into the itinerary agent
-    g.add_edge("research_node", "itinerary_node")
-    g.add_edge("budget_node", "itinerary_node")
-    g.add_edge("local_node", "itinerary_node")
-    
-    g.add_edge("itinerary_node", END)
+    # Simple linear flow
+    g.add_edge(START, "escrow_agent")
+    g.add_edge("escrow_agent", END)
 
-    # Compile without checkpointer to avoid state persistence issues
     return g.compile()
 
 
-app = FastAPI(title="AI Trip Planner")
+app = FastAPI(title="Escrow Knowledge Assistant")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -800,7 +418,7 @@ def serve_frontend():
 
 @app.get("/health")
 def health():
-    return {"status": "healthy", "service": "ai-trip-planner"}
+    return {"status": "healthy", "service": "escrow-knowledge-assistant"}
 
 
 # Initialize tracing once at startup, not per request
@@ -809,48 +427,86 @@ if _TRACING:
         space_id = os.getenv("ARIZE_SPACE_ID")
         api_key = os.getenv("ARIZE_API_KEY")
         if space_id and api_key:
-            tp = register(space_id=space_id, api_key=api_key, project_name="ai-trip-planner")
+            tp = register(space_id=space_id, api_key=api_key, project_name="escrow-assistant")
             LangChainInstrumentor().instrument(tracer_provider=tp, include_chains=True, include_agents=True, include_tools=True)
             LiteLLMInstrumentor().instrument(tracer_provider=tp, skip_dep_check=True)
     except Exception:
         pass
 
-@app.post("/plan-trip", response_model=TripResponse)
-def plan_trip(req: TripRequest):
+
+@app.post("/ask", response_model=EscrowResponse)
+def ask_escrow(req: EscrowQuery):
+    """Handle escrow-related questions using RAG."""
     graph = build_graph()
-    
-    # Only include necessary fields in initial state
-    # Agent outputs (research, budget, local, final) will be added during execution
+
+    # Convert conversation history to list of dicts
+    history_dicts = []
+    if req.conversation_history:
+        for msg in req.conversation_history:
+            history_dicts.append({"role": msg.role, "content": msg.content})
+
+    # Initialize state with user question and history
     state = {
-        "messages": [],
-        "trip_request": req.model_dump(),
-        "tool_calls": [],
+        "question": req.question,
+        "conversation_history": history_dicts,
+        "context": None,
+        "answer": None,
+        "sources": [],
     }
-    
+
     # Add session and user tracking attributes to the trace
     session_id = req.session_id
     user_id = req.user_id
-    turn_idx = req.turn_index
-    
-    # Build attributes for session and user tracking
+
     attrs_kwargs = {}
     if session_id:
         attrs_kwargs["session_id"] = session_id
     if user_id:
         attrs_kwargs["user_id"] = user_id
-    
-    # Add turn_index as a custom span attribute if provided
-    if turn_idx is not None and _TRACING:
-        with using_attributes(**attrs_kwargs):
-            current_span = trace.get_current_span()
-            if current_span:
-                current_span.set_attribute("turn_index", turn_idx)
-            out = graph.invoke(state)
-    else:
-        with using_attributes(**attrs_kwargs):
-            out = graph.invoke(state)
-    
-    return TripResponse(result=out.get("final", ""), tool_calls=out.get("tool_calls", []))
+
+    with using_attributes(**attrs_kwargs):
+        out = graph.invoke(state)
+
+    # Generate unique message ID for feedback tracking
+    message_id = str(uuid.uuid4())[:8]
+
+    return EscrowResponse(
+        answer=out.get("answer", "I'm sorry, I couldn't process your question. Please try again."),
+        sources=out.get("sources", []),
+        confidence="high" if out.get("sources") else "low",
+        message_id=message_id
+    )
+
+
+@app.post("/feedback")
+def submit_feedback(req: FeedbackRequest):
+    """Record user feedback on assistant responses."""
+    feedback_file = Path(__file__).parent / "data" / "feedback.json"
+
+    # Load existing feedback
+    feedback_list = []
+    if feedback_file.exists():
+        try:
+            feedback_list = json.loads(feedback_file.read_text())
+        except (json.JSONDecodeError, Exception):
+            feedback_list = []
+
+    # Append new feedback
+    feedback_list.append({
+        "message_id": req.message_id,
+        "question": req.question,
+        "answer": req.answer[:500],  # Truncate for storage
+        "rating": req.rating,
+        "session_id": req.session_id,
+        "timestamp": datetime.utcnow().isoformat()
+    })
+
+    # Ensure data directory exists
+    feedback_file.parent.mkdir(parents=True, exist_ok=True)
+
+    # Save
+    feedback_file.write_text(json.dumps(feedback_list, indent=2))
+    return {"status": "recorded"}
 
 
 if __name__ == "__main__":

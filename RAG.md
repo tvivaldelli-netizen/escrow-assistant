@@ -1,6 +1,6 @@
 # Local Guide RAG Demo
 
-This AI Trip Planner includes an optional Retrieval-Augmented Generation (RAG) feature that powers the `local_agent` with curated, real-world local experiences. RAG stays dormant until you opt in, making it perfect for learning step-by-step.
+This Escrow Assistant includes an optional Retrieval-Augmented Generation (RAG) feature that powers the `local_agent` with curated, real-world local experiences. RAG stays dormant until you opt in, making it perfect for learning step-by-step.
 
 ## What is RAG?
 
