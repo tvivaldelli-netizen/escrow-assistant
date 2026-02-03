@@ -29,7 +29,7 @@ User Question → FastAPI Backend → RAG Retrieval (Vector Search) → LLM Resp
 - **Frontend**: Single-page HTML with Tailwind CSS, served by FastAPI at `/`
 - **RAG**: OpenAI embeddings with in-memory vector store over escrow FAQs
 - **LLM**: OpenAI GPT-3.5/4 or OpenRouter (configurable)
-- **Observability**: Optional Arize/OpenInference tracing
+- **Observability**: Arize AX tracing with OpenInference (LangGraph, LangChain, OpenAI auto-instrumentation)
 
 ## Project Structure
 
@@ -49,6 +49,7 @@ frontend/
 ## Key Files
 
 - `backend/main.py` - Main application entry point containing:
+  - Arize AX tracing initialization (must be at top, before LangChain imports)
   - `EscrowFAQRetriever` class - RAG retrieval with vector/keyword search
   - `escrow_agent()` - LangGraph node that handles questions
   - API endpoints: `/ask`, `/feedback`, `/health`
@@ -85,10 +86,33 @@ ENABLE_RAG=1                              # Enable/disable RAG (default: enabled
 OPENAI_EMBED_MODEL=text-embedding-3-small # Embedding model
 TEST_MODE=1                               # Use fake LLM for testing
 
-# Optional observability (Arize)
-ARIZE_SPACE_ID=...
-ARIZE_API_KEY=...
+# Arize AX Observability (optional but recommended)
+ARIZE_SPACE_ID=...                        # Your Arize Space ID
+ARIZE_API_KEY=...                         # Your Arize API Key
+ARIZE_PROJECT_NAME=escrow-assistant       # Project name in Arize (default: escrow-assistant)
 ```
+
+## Arize AX Observability
+
+When `ARIZE_SPACE_ID` and `ARIZE_API_KEY` are set, the app automatically sends traces to Arize AX for visualization.
+
+**What gets traced:**
+- LangGraph workflow execution (agent nodes, edges)
+- LangChain operations (chains, prompts, retrievers)
+- OpenAI API calls (completions, embeddings)
+- Custom metadata (RAG documents retrieved, session/user IDs)
+
+**Setup:**
+1. Sign up at [arize.com](https://arize.com) and get your Space ID and API Key
+2. Add the credentials to `backend/.env`
+3. Restart the server - you'll see `[Arize] Tracing enabled` in logs
+4. View traces in the Arize dashboard under your project name
+
+**Traces include:**
+- Input questions and output answers
+- RAG retrieval results and document counts
+- LLM prompts and completions
+- Session and user tracking for conversation analysis
 
 ## Tech Stack
 
@@ -115,7 +139,7 @@ Edit `backend/data/escrow_faqs.json`. Each entry needs:
 ```
 
 ### Modifying the system prompt
-Edit `ESCROW_SYSTEM_PROMPT` in `backend/main.py` (around line 119).
+Edit `ESCROW_SYSTEM_PROMPT` in `backend/main.py` (around line 177).
 
 ### Updating frontend quick questions
 Edit the `FAQ_CACHE` object in `frontend/index.html` (around line 641) for instant cached responses, or modify the quick question buttons in the HTML.

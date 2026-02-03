@@ -1,26 +1,74 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
 import os
-import time
-import json
-import uuid
-from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv, find_dotenv
 load_dotenv(find_dotenv())
 
-# Minimal observability via Arize/OpenInference (optional)
+# =============================================================================
+# Arize AX Observability - MUST be initialized BEFORE LangChain/OpenAI imports
+# =============================================================================
+# This ensures auto-instrumentation properly wraps all LLM calls
+_TRACING = False
+_tracer_provider = None
+
+def _init_arize_tracing():
+    """Initialize Arize AX tracing for LangGraph/LangChain/OpenAI observability.
+
+    Must be called before importing LangChain or OpenAI to ensure proper
+    auto-instrumentation of all LLM calls.
+    """
+    global _TRACING, _tracer_provider
+
+    space_id = os.getenv("ARIZE_SPACE_ID")
+    api_key = os.getenv("ARIZE_API_KEY")
+
+    if not space_id or not api_key:
+        print("[Arize] Tracing disabled: ARIZE_SPACE_ID and ARIZE_API_KEY not set")
+        return False
+
+    if os.getenv("TEST_MODE"):
+        print("[Arize] Tracing disabled in TEST_MODE")
+        return False
+
+    try:
+        from arize.otel import register
+        from openinference.instrumentation.langchain import LangChainInstrumentor
+
+        # Register tracer provider with Arize
+        _tracer_provider = register(
+            space_id=space_id,
+            api_key=api_key,
+            project_name=os.getenv("ARIZE_PROJECT_NAME", "escrow-assistant")
+        )
+
+        # Instrument LangChain (covers LangGraph and OpenAI calls made through LangChain)
+        LangChainInstrumentor().instrument(tracer_provider=_tracer_provider)
+
+        # Note: openinference-instrumentation-openai requires Python <3.14
+        # LangChain instrumentor still captures OpenAI calls made via langchain-openai
+        try:
+            from openinference.instrumentation.openai import OpenAIInstrumentor
+            OpenAIInstrumentor().instrument(tracer_provider=_tracer_provider)
+        except ImportError:
+            pass  # Optional: only available on Python <3.14
+
+        print(f"[Arize] Tracing enabled - project: {os.getenv('ARIZE_PROJECT_NAME', 'escrow-assistant')}")
+        return True
+
+    except ImportError as e:
+        print(f"[Arize] Tracing packages not installed: {e}")
+        return False
+    except Exception as e:
+        print(f"[Arize] Tracing initialization failed: {e}")
+        return False
+
+# Initialize tracing BEFORE importing LangChain/OpenAI
+_TRACING = _init_arize_tracing()
+
+# Import tracing utilities (with fallbacks if not available)
 try:
-    from arize.otel import register
-    from openinference.instrumentation.langchain import LangChainInstrumentor
-    from openinference.instrumentation.litellm import LiteLLMInstrumentor
     from openinference.instrumentation import using_prompt_template, using_metadata, using_attributes
     from opentelemetry import trace
-    _TRACING = True
-except Exception:
+except ImportError:
     def using_prompt_template(**kwargs):  # type: ignore
         from contextlib import contextmanager
         @contextmanager
@@ -39,7 +87,20 @@ except Exception:
         def _noop():
             yield
         return _noop()
-    _TRACING = False
+    trace = None
+
+# =============================================================================
+# Application imports - AFTER tracing initialization
+# =============================================================================
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from pydantic import BaseModel
+from typing import Optional, List, Dict, Any
+import time
+import json
+import uuid
+from datetime import datetime
 
 # LangGraph + LangChain
 from langgraph.graph import StateGraph, END, START
@@ -394,18 +455,27 @@ def escrow_agent(state: EscrowState) -> EscrowState:
 
     # Agent metadata and prompt template instrumentation
     with using_attributes(tags=["escrow", "faq_assistant"]):
-        if _TRACING:
+        if _TRACING and trace is not None:
             current_span = trace.get_current_span()
             if current_span:
-                current_span.set_attribute("metadata.agent_type", "escrow")
+                # OpenInference semantic attributes for better Arize visualization
+                current_span.set_attribute("metadata.agent_type", "escrow_faq_assistant")
                 current_span.set_attribute("metadata.rag_enabled", str(ENABLE_RAG))
                 current_span.set_attribute("metadata.faqs_retrieved", len(retrieved_faqs))
                 current_span.set_attribute("metadata.history_turns", len(conversation_history) // 2)
+                current_span.set_attribute("input.value", question)
+                current_span.set_attribute("retrieval.documents_count", len(retrieved_faqs))
 
         response = llm.invoke([
             SystemMessage(content=ESCROW_SYSTEM_PROMPT),
             HumanMessage(content=user_prompt)
         ])
+
+        # Record output in span
+        if _TRACING and trace is not None:
+            current_span = trace.get_current_span()
+            if current_span:
+                current_span.set_attribute("output.value", response.content[:1000] if response.content else "")
 
     return {
         "question": question,
@@ -450,19 +520,6 @@ def serve_frontend():
 @app.get("/health")
 def health():
     return {"status": "healthy", "service": "escrow-knowledge-assistant"}
-
-
-# Initialize tracing once at startup, not per request
-if _TRACING:
-    try:
-        space_id = os.getenv("ARIZE_SPACE_ID")
-        api_key = os.getenv("ARIZE_API_KEY")
-        if space_id and api_key:
-            tp = register(space_id=space_id, api_key=api_key, project_name="escrow-assistant")
-            LangChainInstrumentor().instrument(tracer_provider=tp, include_chains=True, include_agents=True, include_tools=True)
-            LiteLLMInstrumentor().instrument(tracer_provider=tp, skip_dep_check=True)
-    except Exception:
-        pass
 
 
 @app.post("/ask", response_model=EscrowResponse)
