@@ -183,8 +183,7 @@ ESCROW_SYSTEM_PROMPT = """You are an Escrow Assistant. Your role is to answer qu
 Guidelines:
 - Be helpful, clear, and concise
 - Use the knowledge base FAQs provided to answer questions accurately
-- If no relevant FAQs are provided (indicated by "No relevant FAQs found"), politely explain that you can only help with escrow-related questions and ask the customer to rephrase or contact Customer Care for other inquiries
-- For off-topic questions (weather, restaurants, other banking, etc.), politely redirect: "I'm an Escrow Assistant and can only help with escrow-related questions. For other inquiries, please contact Customer Care."
+- If no relevant FAQs are provided (indicated by "No relevant FAQs found"), ask the customer to provide more details about their escrow question. Only suggest contacting Customer Care if the question is escrow-related but you cannot answer it.
 - Never make up information about specific account details, balances, or dates
 - Be empathetic - escrow can be confusing for customers
 - For vague questions like "help" or "question", ask the customer to provide more details about their escrow question
@@ -197,7 +196,12 @@ Topics you can help with:
 - Escrow balance and disbursement questions
 - Refund and surplus check status
 - Auto-pay and bill pay questions
-- Escrow refunds after home sale"""
+- Escrow refunds after home sale
+
+Off-topic handling:
+When a question is NOT about escrow (e.g. weather, restaurants, flights, credit cards, banking, taxes filing, general life questions), respond ONLY with:
+"I'm an Escrow Assistant and can only help with escrow-related questions like shortages, surpluses, insurance, taxes, PMI, and payment changes. Is there anything escrow-related I can help you with?"
+Do NOT mention "Customer Care", "support", "contact us", or any referral in your off-topic response. Customer Care should only be mentioned for escrow-related questions you cannot fully answer."""
 
 
 # RAG helper: Load escrow FAQs as LangChain documents
@@ -240,8 +244,8 @@ class EscrowFAQRetriever:
     """
 
     # Relevance thresholds - scores below these are filtered out
-    # For vector search: cosine distance (lower = more similar, 0 = identical)
-    VECTOR_RELEVANCE_THRESHOLD = 0.8  # Max distance to consider relevant
+    # For vector search: cosine similarity (higher = more similar, 1 = identical)
+    VECTOR_RELEVANCE_THRESHOLD = 0.3  # Min similarity to consider relevant
     # For keyword search: minimum score to return results
     KEYWORD_MIN_SCORE = 3  # Require at least one keyword match
 
@@ -287,9 +291,10 @@ class EscrowFAQRetriever:
         if not ENABLE_RAG or self.is_empty:
             return []
 
-        # Skip retrieval for very short/meaningless queries
+        # Skip retrieval for very short/meaningless queries (greetings, punctuation)
         clean_query = query.strip().lower()
-        if len(clean_query) < 3 or clean_query in ['?', '??', '???', 'help', 'hi', 'hello']:
+        SKIP_QUERIES = {'?', '??', '???', 'hi', 'hello', 'hey'}
+        if len(clean_query) < 3 or clean_query in SKIP_QUERIES:
             return []
 
         # Use vector search if available, otherwise fall back to keywords
@@ -298,20 +303,18 @@ class EscrowFAQRetriever:
 
         try:
             # Use similarity_search_with_score to get relevance scores
-            # Returns list of (Document, score) tuples where score is cosine distance
+            # Returns list of (Document, score) tuples where score is cosine similarity
+            # (higher = more similar, 1.0 = identical, 0.0 = orthogonal)
             docs_with_scores = self._vectorstore.similarity_search_with_score(query, k=max(k, 5))
         except Exception:
             return self._keyword_fallback(query, k=k)
 
         # Filter by relevance threshold and format results
         results = []
-        for doc, distance in docs_with_scores:
-            # Lower distance = more similar. Filter out low-relevance results.
-            if distance > self.VECTOR_RELEVANCE_THRESHOLD:
+        for doc, similarity in docs_with_scores:
+            # Higher similarity = more relevant. Filter out low-relevance results.
+            if similarity < self.VECTOR_RELEVANCE_THRESHOLD:
                 continue
-
-            # Convert distance to similarity score (0-1 where 1 is best)
-            similarity = max(0.0, 1.0 - distance)
 
             results.append({
                 "content": doc.page_content,
@@ -321,6 +324,16 @@ class EscrowFAQRetriever:
 
             if len(results) >= k:
                 break
+
+        # Re-rank by keyword overlap to differentiate similar FAQs
+        if len(results) > 1:
+            query_lower = query.lower()
+            for r in results:
+                keywords = r["metadata"].get("keywords", [])
+                for kw in keywords:
+                    if kw.lower() in query_lower:
+                        r["score"] += 0.1
+            results.sort(key=lambda x: x["score"], reverse=True)
 
         # If vector search found nothing relevant, try keyword fallback
         if not results:

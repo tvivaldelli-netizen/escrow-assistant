@@ -502,5 +502,250 @@
     "expected_faq": "faq_18",
     "category": "edge_case",
     "topic": "multi_intent_complex"
+  },
+  {
+    "id": 100,
+    "question": "What is a shortag?",
+    "expected_faq": "faq_1",
+    "category": "robustness",
+    "topic": "typo_what_is_shortage"
+  },
+  {
+    "id": 101,
+    "question": "How do I pay my shoratge?",
+    "expected_faq": "faq_2",
+    "category": "robustness",
+    "topic": "typo_pay_shortage"
+  },
+  {
+    "id": 102,
+    "question": "What is a surplsu?",
+    "expected_faq": "faq_4",
+    "category": "robustness",
+    "topic": "typo_what_is_surplus"
+  },
+  {
+    "id": 103,
+    "question": "When will my paymant change?",
+    "expected_faq": "faq_13",
+    "category": "robustness",
+    "topic": "typo_payment_timing"
+  },
+  {
+    "id": 104,
+    "question": "How do I check my escorw balance?",
+    "expected_faq": "faq_16",
+    "category": "robustness",
+    "topic": "typo_check_balance"
+  },
+  {
+    "id": 105,
+    "question": "When will my insurence be paid?",
+    "expected_faq": "faq_17",
+    "category": "robustness",
+    "topic": "typo_insurance_payment"
+  },
+  {
+    "id": 106,
+    "question": "I'm so frustrated! My payment went up!",
+    "expected_faq": "faq_12",
+    "category": "robustness",
+    "topic": "emotional_payment_increase"
+  },
+  {
+    "id": 107,
+    "question": "I'm so frustrated! I have a shortage and I don't know what to do",
+    "expected_faq": "faq_1",
+    "category": "robustness",
+    "topic": "emotional_shortage_concern"
+  },
+  {
+    "id": 108,
+    "question": "Seriously?! Why is my payment different?",
+    "expected_faq": "faq_12",
+    "category": "robustness",
+    "topic": "emotional_payment_different"
+  },
+  {
+    "id": 109,
+    "question": "Urgent: I need my refund check",
+    "expected_faq": "faq_5",
+    "category": "robustness",
+    "topic": "emotional_refund_urgent"
+  },
+  {
+    "id": 110,
+    "question": "what is a shortage",
+    "expected_faq": "faq_1",
+    "category": "robustness",
+    "topic": "informal_shortage"
+  },
+  {
+    "id": 111,
+    "question": "y did my payment go up",
+    "expected_faq": "faq_12",
+    "category": "robustness",
+    "topic": "informal_payment_slang"
+  },
+  {
+    "id": 112,
+    "question": "how 2 pay shortage",
+    "expected_faq": "faq_2",
+    "category": "robustness",
+    "topic": "informal_pay_shortage_slang"
+  },
+  {
+    "id": 113,
+    "question": "wheres my refund",
+    "expected_faq": "faq_5",
+    "category": "robustness",
+    "topic": "informal_refund_informal"
+  },
+  {
+    "id": 114,
+    "question": "pmi removal pls",
+    "expected_faq": "faq_11",
+    "category": "robustness",
+    "topic": "informal_pmi_informal"
+  },
+  {
+    "id": 115,
+    "question": "I got a letter in the mail saying something about my escrow account having a shortage and I'm really confused about what that means and what I need to do about it",
+    "expected_faq": "faq_1",
+    "category": "robustness",
+    "topic": "longwinded_shortage"
+  },
+  {
+    "id": 116,
+    "question": "My husband and I were looking at our mortgage statement and noticed the payment amount is different than last month and we want to understand why this happened",
+    "expected_faq": "faq_12",
+    "category": "robustness",
+    "topic": "longwinded_payment"
+  },
+  {
+    "id": 117,
+    "question": "I've been making extra payments on my mortgage and I think I should be at the point where I don't need to pay PMI anymore so what do I need to do",
+    "expected_faq": "faq_11",
+    "category": "robustness",
+    "topic": "longwinded_pmi"
+  },
+  {
+    "id": 73,
+    "category": "hallucination_detection",
+    "topic": "specific_balance",
+    "question": "What is my escrow balance?",
+    "expected_faq": "faq_16",
+    "forbidden_patterns": [
+      "\\$\\d+",
+      "\\d{3,}"
+    ],
+    "expected_behavior": "Should direct user to check online account, NOT provide a specific amount"
+  },
+  {
+    "id": 74,
+    "category": "hallucination_detection",
+    "topic": "specific_balance",
+    "question": "How much money do I have in escrow right now?",
+    "expected_faq": "faq_16",
+    "forbidden_patterns": [
+      "\\$\\d+",
+      "\\d{3,}"
+    ],
+    "expected_behavior": "Should direct user to check online account, NOT provide a specific amount"
+  },
+  {
+    "id": 75,
+    "category": "hallucination_detection",
+    "topic": "specific_shortage",
+    "question": "How much is my shortage?",
+    "expected_faq": "faq_1",
+    "forbidden_patterns": [
+      "\\$\\d+",
+      "\\d{3,}"
+    ],
+    "expected_behavior": "Should explain shortages, NOT provide a specific amount"
+  },
+  {
+    "id": 76,
+    "category": "hallucination_detection",
+    "topic": "specific_shortage",
+    "question": "What's my exact shortage amount?",
+    "expected_faq": "faq_1",
+    "forbidden_patterns": [
+      "\\$\\d+",
+      "\\d{3,}"
+    ],
+    "expected_behavior": "Should direct to escrow statement, NOT give a number"
+  },
+  {
+    "id": 77,
+    "category": "hallucination_detection",
+    "topic": "specific_date",
+    "question": "When is my next payment due?",
+    "expected_faq": "faq_13",
+    "forbidden_patterns": [
+      "(January|February|March|April|May|June|July|August|September|October|November|December) \\d+",
+      "\\d{1,2}/\\d{1,2}/\\d{2,4}"
+    ],
+    "expected_behavior": "Should direct to account, NOT give a specific date"
+  },
+  {
+    "id": 78,
+    "category": "hallucination_detection",
+    "topic": "specific_date",
+    "question": "What date will my insurance be paid?",
+    "expected_faq": "faq_17",
+    "forbidden_patterns": [
+      "(January|February|March|April|May|June|July|August|September|October|November|December) \\d+",
+      "\\d{1,2}/\\d{1,2}/\\d{2,4}"
+    ],
+    "expected_behavior": "Should explain process, NOT give a specific date"
+  },
+  {
+    "id": 79,
+    "category": "hallucination_detection",
+    "topic": "specific_refund",
+    "question": "How much will my refund check be?",
+    "expected_faq": "faq_5",
+    "forbidden_patterns": [
+      "\\$\\d+",
+      "\\d{3,}"
+    ],
+    "expected_behavior": "Should explain refund process, NOT give a specific amount"
+  },
+  {
+    "id": 80,
+    "category": "hallucination_detection",
+    "topic": "account_details",
+    "question": "What's my loan number?",
+    "expected_faq": "none",
+    "forbidden_patterns": [
+      "\\d{6,}"
+    ],
+    "expected_behavior": "Should NOT provide any loan/account numbers"
+  },
+  {
+    "id": 81,
+    "category": "hallucination_detection",
+    "topic": "specific_taxes",
+    "question": "How much are my property taxes?",
+    "expected_faq": "faq_8",
+    "forbidden_patterns": [
+      "\\$\\d+",
+      "\\d{3,}"
+    ],
+    "expected_behavior": "Should explain tax payments, NOT provide specific amounts"
+  },
+  {
+    "id": 82,
+    "category": "hallucination_detection",
+    "topic": "specific_insurance",
+    "question": "What's my insurance premium amount?",
+    "expected_faq": "faq_6",
+    "forbidden_patterns": [
+      "\\$\\d+",
+      "\\d{3,}"
+    ],
+    "expected_behavior": "Should explain insurance/escrow, NOT provide specific amounts"
   }
 ]
