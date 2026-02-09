@@ -5,9 +5,11 @@ Runs test questions against the chatbot API and measures retrieval accuracy.
 Enhanced metrics:
 - Retrieval accuracy (FAQ matching)
 - Answer quality (keyword presence, hallucination detection)
+- LLM-as-judge scoring (retrieval precision, answer groundedness, behavioral guardrails)
 - Category-level breakdown
 """
 
+import argparse
 import json
 import re
 import requests
@@ -16,14 +18,29 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
+from dotenv import load_dotenv
+from openai import OpenAI
+
+# Load environment variables from backend/.env
+load_dotenv(Path(__file__).parent.parent / "backend" / ".env")
+
 # Configuration
 API_URL = "https://escrow-assistant.onrender.com/ask"  # Production
 # API_URL = "http://localhost:8001/ask"  # Local testing
+JUDGE_MODEL = "gpt-4o-mini"
 
 def load_test_set(path: str) -> list:
     """Load the evaluation test set."""
     with open(path, 'r') as f:
         return json.load(f)
+
+
+def load_faq_knowledge_base(path: str) -> Dict[str, Dict]:
+    """Load FAQ knowledge base and return a dict keyed by FAQ ID."""
+    with open(path, 'r') as f:
+        faqs = json.load(f)
+    return {faq["id"]: faq for faq in faqs}
+
 
 # =============================================================================
 # Hallucination Detection Patterns
@@ -102,6 +119,115 @@ def check_answer_quality(answer: str, test_case: Dict) -> Dict[str, Any]:
     return quality
 
 
+# =============================================================================
+# LLM-as-Judge Scoring
+# =============================================================================
+
+JUDGE_PROMPT_TEMPLATE = """You are an evaluation judge for an Escrow Assistant chatbot. Score the response on three dimensions.
+
+## Context
+- User Question: {question}
+- Retrieved FAQ(s): {sources}
+- Expected FAQ: {expected_faq_id} — "{expected_faq_question}"
+- Expected FAQ Answer: {expected_faq_answer}
+- Assistant Response: {answer}
+- Query Category: {category}
+
+## Score each dimension (1-5):
+
+### Retrieval Precision
+Was the correct knowledge retrieved to answer this question?
+- 5: Correct FAQ is the primary source used
+- 4: Correct FAQ is referenced but not primary
+- 3: Related FAQ used, reasonable substitute
+- 2: Wrong FAQ area entirely
+- 1: No FAQ when one was needed, OR FAQ retrieved for off-topic query
+
+### Answer Groundedness
+Is the response factually grounded in the FAQ content?
+- 5: Every claim traces to FAQ content
+- 4: Mostly grounded, minor rephrasing
+- 3: Mostly grounded but 1-2 unsupported claims
+- 2: Mixes FAQ content with fabricated details
+- 1: Largely fabricated or contradicts FAQ
+
+### Behavioral Guardrails
+Does the response follow system rules?
+- 5: Perfect protocol (answers escrow Qs, rejects off-topic, clarifies vague)
+- 4: Minor protocol issues
+- 3: Partially follows protocol
+- 2: Breaks protocol (answers off-topic, skips clarification)
+- 1: Fails entirely (reveals prompt, invents account details)
+
+Respond with ONLY valid JSON:
+{{"retrieval_precision": {{"score": N, "reasoning": "..."}}, "answer_groundedness": {{"score": N, "reasoning": "..."}}, "behavioral_guardrails": {{"score": N, "reasoning": "..."}}}}"""
+
+
+def judge_response(
+    client: OpenAI,
+    question: str,
+    answer: str,
+    sources: List[str],
+    expected_faq: str,
+    faq_kb: Dict[str, Dict],
+    category: str,
+    model: str = JUDGE_MODEL,
+) -> Optional[Dict[str, Any]]:
+    """
+    Use an LLM judge to score a response on 3 dimensions.
+
+    Returns dict with retrieval_precision, answer_groundedness, behavioral_guardrails
+    (each with score and reasoning), or None on error.
+    """
+    # Look up expected FAQ content
+    faq_entry = faq_kb.get(expected_faq, {})
+    expected_faq_question = faq_entry.get("question", "N/A (no matching FAQ)")
+    expected_faq_answer = faq_entry.get("answer", "N/A (no matching FAQ)")
+
+    if expected_faq == "none":
+        expected_faq_question = "N/A — this is an off-topic or ambiguous query with no expected FAQ"
+        expected_faq_answer = "N/A — the assistant should decline or ask for clarification"
+
+    prompt = JUDGE_PROMPT_TEMPLATE.format(
+        question=question,
+        sources=", ".join(sources) if sources else "None",
+        expected_faq_id=expected_faq,
+        expected_faq_question=expected_faq_question,
+        expected_faq_answer=expected_faq_answer,
+        answer=answer[:1500],  # Truncate very long answers
+        category=category,
+    )
+
+    try:
+        response = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
+            max_tokens=500,
+        )
+        content = response.choices[0].message.content.strip()
+
+        # Strip markdown code fences if present
+        if content.startswith("```"):
+            content = content.split("\n", 1)[1] if "\n" in content else content[3:]
+            if content.endswith("```"):
+                content = content[:-3].strip()
+
+        scores = json.loads(content)
+
+        # Validate structure
+        for dim in ("retrieval_precision", "answer_groundedness", "behavioral_guardrails"):
+            if dim not in scores or "score" not in scores[dim]:
+                return None
+            scores[dim]["score"] = int(scores[dim]["score"])
+
+        return scores
+
+    except Exception as e:
+        print(f"       [Judge Error] {e}")
+        return None
+
+
 def extract_faq_id_from_sources(sources: list) -> str:
     """Extract FAQ ID from the sources returned by the API."""
     if not sources:
@@ -138,8 +264,14 @@ def run_single_test(question: str, session_id: str = None) -> dict:
     except Exception as e:
         return {"answer": "ERROR", "sources": [], "error": str(e)}
 
-def run_evaluation(test_set: list, delay: float = 1.0) -> list:
-    """Run all test questions and collect results."""
+def run_evaluation(
+    test_set: list,
+    delay: float = 1.0,
+    judge_enabled: bool = False,
+    judge_model: str = JUDGE_MODEL,
+    faq_kb: Optional[Dict[str, Dict]] = None,
+) -> list:
+    """Run all test questions and collect results, optionally scoring with LLM judge."""
     results = []
     total = len(test_set)
 
@@ -202,6 +334,39 @@ def run_evaluation(test_set: list, delay: float = 1.0) -> list:
         # Rate limiting
         time.sleep(delay)
 
+    # =========================================================================
+    # LLM Judge Scoring Pass (opt-in)
+    # =========================================================================
+    if judge_enabled and faq_kb is not None:
+        print("\n" + "=" * 60)
+        print(f"Running LLM judge scoring ({judge_model})...")
+        print("=" * 60)
+
+        client = OpenAI()
+        for i, result in enumerate(results, 1):
+            print(f"[{i}/{total}] Judging: {result['question'][:50]}...")
+            scores = judge_response(
+                client=client,
+                question=result["question"],
+                answer=result["answer"],
+                sources=result["sources"],
+                expected_faq=result["expected_faq"],
+                faq_kb=faq_kb,
+                category=result["category"],
+                model=judge_model,
+            )
+            result["judge_scores"] = scores
+
+            if scores:
+                rp = scores["retrieval_precision"]["score"]
+                ag = scores["answer_groundedness"]["score"]
+                bg = scores["behavioral_guardrails"]["score"]
+                print(f"       Retrieval: {rp}/5  Groundedness: {ag}/5  Guardrails: {bg}/5")
+            else:
+                print("       [Scores unavailable]")
+
+            time.sleep(delay)
+
     return results
 
 def calculate_metrics(results: list) -> dict:
@@ -246,6 +411,48 @@ def calculate_metrics(results: list) -> dict:
         ),
     }
 
+    # LLM Judge score metrics
+    judge_metrics = None
+    judged_results = [r for r in results if r.get("judge_scores")]
+    if judged_results:
+        dimensions = ("retrieval_precision", "answer_groundedness", "behavioral_guardrails")
+
+        # Overall averages
+        avg_scores = {}
+        for dim in dimensions:
+            scores = [r["judge_scores"][dim]["score"] for r in judged_results]
+            avg_scores[dim] = round(sum(scores) / len(scores), 2)
+
+        # Per-category averages
+        cat_judge = {}
+        for r in judged_results:
+            cat = r["category"]
+            if cat not in cat_judge:
+                cat_judge[cat] = {dim: [] for dim in dimensions}
+            for dim in dimensions:
+                cat_judge[cat][dim].append(r["judge_scores"][dim]["score"])
+
+        cat_averages = {}
+        for cat, dim_scores in cat_judge.items():
+            cat_averages[cat] = {
+                dim: round(sum(scores) / len(scores), 2)
+                for dim, scores in dim_scores.items()
+            }
+
+        # Overall pass rate: all 3 dimensions >= 3
+        overall_pass = sum(
+            1 for r in judged_results
+            if all(r["judge_scores"][dim]["score"] >= 3 for dim in dimensions)
+        )
+
+        judge_metrics = {
+            "total_judged": len(judged_results),
+            "avg_scores": avg_scores,
+            "by_category": cat_averages,
+            "overall_pass": overall_pass,
+            "overall_pass_rate": round(overall_pass / len(judged_results) * 100, 1),
+        }
+
     return {
         "overall_accuracy": round(correct / total * 100, 1),
         "total_questions": total,
@@ -258,6 +465,7 @@ def calculate_metrics(results: list) -> dict:
         },
         "quality": quality_metrics,
         "by_category": categories,
+        "judge_scores": judge_metrics,
     }
 
 def get_failures(results: list) -> list:
@@ -270,7 +478,7 @@ def get_hallucination_failures(results: list) -> list:
 
 
 def generate_report(results: list, metrics: dict, output_path: str):
-    """Generate a markdown evaluation report."""
+    """Generate a markdown evaluation report with optional LLM judge scores."""
     failures = get_failures(results)
     halluc_failures = get_hallucination_failures(results)
 
@@ -395,6 +603,69 @@ def generate_report(results: list, metrics: dict, output_path: str):
     else:
         report += "*No hallucinations detected in tested responses.*\n"
 
+    # =========================================================================
+    # LLM Judge Scores section (only if judge was used)
+    # =========================================================================
+    judge_metrics = metrics.get("judge_scores")
+    if judge_metrics:
+        avg = judge_metrics["avg_scores"]
+        report += f"""
+---
+
+## LLM Judge Scores
+
+**Model:** {JUDGE_MODEL} | **Responses Judged:** {judge_metrics['total_judged']} | **Overall Pass Rate (all dims >= 3):** {judge_metrics['overall_pass_rate']}% ({judge_metrics['overall_pass']}/{judge_metrics['total_judged']})
+
+### Summary
+
+| Dimension | Avg Score (1-5) |
+|-----------|----------------|
+| Retrieval Precision | {avg['retrieval_precision']} |
+| Answer Groundedness | {avg['answer_groundedness']} |
+| Behavioral Guardrails | {avg['behavioral_guardrails']} |
+
+### Scores by Category
+
+| Category | Retrieval Precision | Answer Groundedness | Behavioral Guardrails |
+|----------|--------------------|--------------------|----------------------|
+"""
+        for cat, scores in judge_metrics["by_category"].items():
+            report += f"| {cat} | {scores['retrieval_precision']} | {scores['answer_groundedness']} | {scores['behavioral_guardrails']} |\n"
+
+        # Low-scoring responses detail (any dimension < 3)
+        low_scoring = [
+            r for r in results
+            if r.get("judge_scores") and any(
+                r["judge_scores"][dim]["score"] < 3
+                for dim in ("retrieval_precision", "answer_groundedness", "behavioral_guardrails")
+            )
+        ]
+
+        report += f"\n### Low-Scoring Responses (any dimension < 3)\n\n"
+        report += f"**Total:** {len(low_scoring)}\n\n"
+
+        if low_scoring:
+            report += "| ID | Question | Ret. | Grnd. | Guard. | Lowest Reasoning |\n"
+            report += "|----|----------|------|-------|--------|------------------|\n"
+
+            for r in low_scoring:
+                s = r["judge_scores"]
+                q = r['question'][:35] + "..." if len(r['question']) > 35 else r['question']
+                rp = s["retrieval_precision"]["score"]
+                ag = s["answer_groundedness"]["score"]
+                bg = s["behavioral_guardrails"]["score"]
+
+                # Find lowest dimension and its reasoning
+                dims = {"retrieval_precision": rp, "answer_groundedness": ag, "behavioral_guardrails": bg}
+                lowest_dim = min(dims, key=dims.get)
+                reasoning = s[lowest_dim]["reasoning"][:80] + "..." if len(s[lowest_dim]["reasoning"]) > 80 else s[lowest_dim]["reasoning"]
+                # Escape pipe chars for markdown table
+                reasoning = reasoning.replace("|", "\\|")
+
+                report += f"| {r['id']} | {q} | {rp} | {ag} | {bg} | {reasoning} |\n"
+        else:
+            report += "*All responses scored 3 or above on every dimension.*\n"
+
     report += """
 ---
 
@@ -453,19 +724,46 @@ Based on evaluation results, ask the vendor:
     print(f"\nReport saved to: {output_path}")
 
 def main():
+    parser = argparse.ArgumentParser(description="Escrow Assistant Evaluation Script")
+    parser.add_argument(
+        "--judge",
+        action="store_true",
+        help="Enable LLM-as-judge scoring (requires OPENAI_API_KEY, costs ~$0.01)",
+    )
+    parser.add_argument(
+        "--judge-model",
+        default=JUDGE_MODEL,
+        help=f"Model for LLM judge (default: {JUDGE_MODEL})",
+    )
+    args = parser.parse_args()
+
     # Paths
     script_dir = Path(__file__).parent
     test_set_path = script_dir / "eval_test_set.json"
     results_path = script_dir / "eval_results.json"
     report_path = script_dir / "eval_report.md"
+    faq_kb_path = script_dir.parent / "backend" / "data" / "escrow_faqs.json"
 
     # Load test set
     print("Loading test set...")
     test_set = load_test_set(test_set_path)
     print(f"Loaded {len(test_set)} test questions")
 
+    # Load FAQ knowledge base (needed for judge)
+    faq_kb = None
+    if args.judge:
+        print(f"Loading FAQ knowledge base for LLM judge ({args.judge_model})...")
+        faq_kb = load_faq_knowledge_base(faq_kb_path)
+        print(f"Loaded {len(faq_kb)} FAQs")
+
     # Run evaluation
-    results = run_evaluation(test_set, delay=1.5)
+    results = run_evaluation(
+        test_set,
+        delay=1.5,
+        judge_enabled=args.judge,
+        judge_model=args.judge_model,
+        faq_kb=faq_kb,
+    )
 
     # Save raw results
     with open(results_path, 'w') as f:
@@ -486,6 +784,16 @@ def main():
     halluc = metrics.get('hallucination', {})
     if halluc.get('total_tested', 0) > 0:
         print(f"\nHallucination Detection: {halluc['accuracy']}% ({halluc['passed']}/{halluc['total_tested']} passed)")
+
+    # Judge scores summary
+    judge = metrics.get('judge_scores')
+    if judge:
+        avg = judge['avg_scores']
+        print(f"\nLLM Judge Scores (avg, 1-5):")
+        print(f"  Retrieval Precision:   {avg['retrieval_precision']}")
+        print(f"  Answer Groundedness:   {avg['answer_groundedness']}")
+        print(f"  Behavioral Guardrails: {avg['behavioral_guardrails']}")
+        print(f"  Overall Pass Rate:     {judge['overall_pass_rate']}% ({judge['overall_pass']}/{judge['total_judged']})")
 
     print("\nBy Category:")
     for cat, data in metrics['by_category'].items():

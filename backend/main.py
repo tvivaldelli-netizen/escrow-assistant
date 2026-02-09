@@ -245,7 +245,7 @@ class EscrowFAQRetriever:
 
     # Relevance thresholds - scores below these are filtered out
     # For vector search: cosine similarity (higher = more similar, 1 = identical)
-    VECTOR_RELEVANCE_THRESHOLD = 0.3  # Min similarity to consider relevant
+    VECTOR_RELEVANCE_THRESHOLD = 0.4  # Min similarity to consider relevant
     # For keyword search: minimum score to return results
     KEYWORD_MIN_SCORE = 3  # Require at least one keyword match
 

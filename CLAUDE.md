@@ -37,13 +37,25 @@ User Question → FastAPI Backend → RAG Retrieval (Vector Search) → LLM Resp
 backend/
   main.py              # FastAPI app, LangGraph agent, RAG retriever
   data/
-    escrow_faqs.json   # Knowledge base for RAG
+    escrow_faqs.json   # Knowledge base for RAG (23 FAQs)
     feedback.json      # User feedback storage
   .env                 # Environment variables (API keys)
   requirements.txt     # Python dependencies
 
 frontend/
   index.html           # Escrow analysis page with chat widget
+
+evals/
+  run_eval.py          # Evaluation script with hallucination detection
+  eval_test_set.json   # 100 test questions across 6 categories
+  eval_results.json    # Latest eval run results
+  eval_report.md       # Generated markdown report
+  generate_test_data.py # Script to generate synthetic test data
+
+docs/
+  Vendor_Demo_Prep.md           # Eval summary for vendor demos
+  AI_Vendor_Evaluation_Rubric.md # Vendor scoring rubric
+  Escrow_FAQ_Knowledge_Base_For_RAG.md # FAQ documentation
 ```
 
 ## Key Files
@@ -51,6 +63,8 @@ frontend/
 - `backend/main.py` - Main application entry point containing:
   - Arize AX tracing initialization (must be at top, before LangChain imports)
   - `EscrowFAQRetriever` class - RAG retrieval with vector/keyword search
+    - Cosine similarity threshold: 0.3 (filters off-topic queries)
+    - Keyword re-ranking boost for exact matches
   - `escrow_agent()` - LangGraph node that handles questions
   - API endpoints: `/ask`, `/feedback`, `/health`
   - System prompt and conversation history handling
@@ -60,6 +74,12 @@ frontend/
   - Floating chat widget with quick question buttons
   - Client-side FAQ cache for instant responses
   - Feedback thumbs up/down functionality
+
+- `evals/run_eval.py` - Evaluation script with:
+  - Retrieval accuracy measurement (FAQ matching)
+  - Hallucination detection (dollar amounts, dates, account numbers)
+  - Category-level breakdown (faq_coverage, off_topic, ambiguous, edge_case, robustness, hallucination_detection)
+  - Markdown report generation
 
 ## API Endpoints
 
@@ -108,11 +128,33 @@ When `ARIZE_SPACE_ID` and `ARIZE_API_KEY` are set, the app automatically sends t
 3. Restart the server - you'll see `[Arize] Tracing enabled` in logs
 4. View traces in the Arize dashboard under your project name
 
-**Traces include:**
-- Input questions and output answers
-- RAG retrieval results and document counts
-- LLM prompts and completions
-- Session and user tracking for conversation analysis
+## Running Evaluations
+
+```powershell
+# Run eval against production
+backend\.venv\Scripts\python.exe evals/run_eval.py
+
+# Run eval with LLM-as-judge scoring (requires OPENAI_API_KEY, ~$0.01)
+backend\.venv\Scripts\python.exe evals/run_eval.py --judge
+
+# Run eval against localhost (edit API_URL in run_eval.py first)
+# API_URL = "http://localhost:8001/ask"
+```
+
+**Current metrics (as of Feb 2026):**
+- Overall accuracy: 75%
+- Hallucination detection: 100% pass rate
+- Target: ≥90%
+
+**Test categories:**
+| Category | Tests | Description |
+|----------|-------|-------------|
+| faq_coverage | 57 | Standard FAQ matching |
+| robustness | 18 | Typos, informal language |
+| hallucination_detection | 10 | Checks model doesn't invent details |
+| off_topic | 5 | Non-escrow queries should be rejected |
+| ambiguous | 5 | Vague queries like "I have a question" |
+| edge_case | 5 | Multi-intent, adversarial inputs |
 
 ## Tech Stack
 
@@ -130,7 +172,7 @@ When `ARIZE_SPACE_ID` and `ARIZE_API_KEY` are set, the app automatically sends t
 Edit `backend/data/escrow_faqs.json`. Each entry needs:
 ```json
 {
-  "id": "FAQ-XX",
+  "id": "faq_XX",
   "category": "Category Name",
   "question": "Question text",
   "answer": "Answer text",
@@ -139,7 +181,10 @@ Edit `backend/data/escrow_faqs.json`. Each entry needs:
 ```
 
 ### Modifying the system prompt
-Edit `ESCROW_SYSTEM_PROMPT` in `backend/main.py` (around line 177).
+Edit `ESCROW_SYSTEM_PROMPT` in `backend/main.py` (around line 183).
+
+### Adjusting retrieval threshold
+Edit `VECTOR_RELEVANCE_THRESHOLD` in `EscrowFAQRetriever` class in `backend/main.py` (around line 247). Higher = stricter filtering. Current: 0.3 (cosine similarity).
 
 ### Updating frontend quick questions
 Edit the `FAQ_CACHE` object in `frontend/index.html` (around line 641) for instant cached responses, or modify the quick question buttons in the HTML.
@@ -147,6 +192,20 @@ Edit the `FAQ_CACHE` object in `frontend/index.html` (around line 641) for insta
 ### Testing without API keys
 Set `TEST_MODE=1` in `.env` to use a fake LLM that returns placeholder responses.
 
+### Running eval after changes
+```powershell
+# Start local server on port 8001
+backend\.venv\Scripts\python.exe -m uvicorn main:app --port 8001 --reload
+
+# Edit evals/run_eval.py to use localhost
+# API_URL = "http://localhost:8001/ask"
+
+# Run eval
+backend\.venv\Scripts\python.exe evals/run_eval.py
+```
+
 ## Deployment
 
 Configured for Render via `render.yaml`. Set environment variables in the Render dashboard.
+
+Production URL: https://escrow-assistant.onrender.com

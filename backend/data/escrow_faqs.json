@@ -11,14 +11,14 @@
     "category": "Shortage",
     "question": "How do I pay my shortage in full as a lump sum?",
     "answer": "You can pay your shortage in full by sending a one-time lump sum payment. You can pay online through your account, by phone, or by mail. When making the payment, be sure to note it is for 'escrow shortage' so it is applied correctly. Paying in full will prevent your monthly payment from increasing to cover the shortage over time. Note: Even if you pay the shortage in full, your monthly escrow payment may still increase if your taxes or insurance went up.",
-    "keywords": ["pay shortage", "full payment", "one-time", "lump sum", "pay in full", "shortage payment"]
+    "keywords": ["pay shortage in full", "full payment", "one-time payment", "lump sum", "pay in full", "pay all at once", "pay off shortage", "single payment"]
   },
   {
     "id": "faq_3",
     "category": "Shortage",
     "question": "Can I spread my shortage payment over monthly installments instead of paying in full?",
     "answer": "Yes, if you don't pay the shortage in full, we will automatically spread the shortage amount over 12 months and add it to your monthly mortgage payment. Your new payment amount will be shown on your escrow analysis statement. This way, you pay a little extra each month instead of one large sum. You can also pay a partial amount now and spread the remaining balance over 12 months.",
-    "keywords": ["spread payment", "monthly", "12 months", "installment", "partial payment", "not pay full"]
+    "keywords": ["spread payment", "monthly installments", "12 months", "installment plan", "partial payment", "not pay full", "spread over time", "little each month", "pay part now"]
   },
   {
     "id": "faq_4",
@@ -137,14 +137,14 @@
     "category": "Auto-Pay",
     "question": "I'm enrolled in auto-pay. Will my payment update automatically when it changes?",
     "answer": "Yes! If you are enrolled in automatic payments directly with your mortgage servicer (not through your bank's bill pay), your payment amount will be updated automatically when your escrow analysis results in a new payment amount. You don't need to take any action - we'll withdraw the new amount on your next scheduled payment date after the change takes effect. You'll receive notice of the new amount before it's withdrawn.",
-    "keywords": ["auto-pay", "automatic payment", "autopay", "update automatically", "enrolled autopay", "direct debit"]
+    "keywords": ["auto-pay", "automatic payment", "autopay", "update automatically", "enrolled autopay", "direct debit", "servicer autopay", "autopay with you", "your autopay"]
   },
   {
     "id": "faq_21",
     "category": "Auto-Pay",
     "question": "I pay through my bank's bill pay service. Do I need to update my payment amount?",
     "answer": "Yes, if you pay through your bank's bill pay service (not your servicer's auto-pay), you must manually update your payment amount when it changes. After receiving your escrow analysis statement with your new payment amount, log into your bank's bill pay and update the amount before the effective date. Failure to update may result in underpayment and potential late fees.",
-    "keywords": ["bill pay", "bank bill pay", "manual update", "update payment", "change amount", "bank automatic"]
+    "keywords": ["bill pay", "bank bill pay", "manual update", "update payment", "change amount", "bank automatic", "third party bill pay", "pay through my bank", "bank's bill pay"]
   },
   {
     "id": "faq_22",
