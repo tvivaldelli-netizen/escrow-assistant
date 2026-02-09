@@ -63,7 +63,7 @@ docs/
 - `backend/main.py` - Main application entry point containing:
   - Arize AX tracing initialization (must be at top, before LangChain imports)
   - `EscrowFAQRetriever` class - RAG retrieval with vector/keyword search
-    - Cosine similarity threshold: 0.3 (filters off-topic queries)
+    - Cosine similarity threshold: 0.4 (filters off-topic queries)
     - Keyword re-ranking boost for exact matches
   - `escrow_agent()` - LangGraph node that handles questions
   - API endpoints: `/ask`, `/feedback`, `/health`
@@ -78,6 +78,7 @@ docs/
 - `evals/run_eval.py` - Evaluation script with:
   - Retrieval accuracy measurement (FAQ matching)
   - Hallucination detection (dollar amounts, dates, account numbers)
+  - LLM-as-judge scoring via `--judge` flag (retrieval precision, answer groundedness, behavioral guardrails)
   - Category-level breakdown (faq_coverage, off_topic, ambiguous, edge_case, robustness, hallucination_detection)
   - Markdown report generation
 
@@ -142,8 +143,9 @@ backend\.venv\Scripts\python.exe evals/run_eval.py --judge
 ```
 
 **Current metrics (as of Feb 2026):**
-- Overall accuracy: 75%
-- Hallucination detection: 100% pass rate
+- Overall retrieval accuracy: 78%
+- Hallucination detection: 100% pass rate (regex), 90% (with judge)
+- LLM judge pass rate: 85% (all 3 dimensions ≥ 3/5)
 - Target: ≥90%
 
 **Test categories:**
@@ -184,7 +186,7 @@ Edit `backend/data/escrow_faqs.json`. Each entry needs:
 Edit `ESCROW_SYSTEM_PROMPT` in `backend/main.py` (around line 183).
 
 ### Adjusting retrieval threshold
-Edit `VECTOR_RELEVANCE_THRESHOLD` in `EscrowFAQRetriever` class in `backend/main.py` (around line 247). Higher = stricter filtering. Current: 0.3 (cosine similarity).
+Edit `VECTOR_RELEVANCE_THRESHOLD` in `EscrowFAQRetriever` class in `backend/main.py` (around line 247). Higher = stricter filtering. Current: 0.4 (cosine similarity).
 
 ### Updating frontend quick questions
 Edit the `FAQ_CACHE` object in `frontend/index.html` (around line 641) for instant cached responses, or modify the quick question buttons in the HTML.
@@ -209,3 +211,8 @@ backend\.venv\Scripts\python.exe evals/run_eval.py
 Configured for Render via `render.yaml`. Set environment variables in the Render dashboard.
 
 Production URL: https://escrow-assistant.onrender.com
+
+**Gotchas:**
+- Render free tier has cold starts (~60-120s for first request after idle)
+- When running eval scripts in background, use `python -u` flag to disable output buffering
+- Push to `main` triggers auto-deploy; wait ~2-3 min before running evals against production
