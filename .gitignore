@@ -89,11 +89,26 @@ temp/
 .cursorrules
 
 test scripts/*.json
-backend/archive/ 
+backend/archive/
 
 backend/__pycache__
 backend/.venv/
 backend/.env
 backend/data/feedback.json
 temp_docx_extract/
-_ul
+_ul*
+nul
+
+# Claude Code
+.claude/settings.local.json
+
+# Generated eval outputs
+evals/eval_results.json
+evals/eval_report.md
+evals/*.csv
+
+# Docs
+docs/
+
+# Images (unless intentionally tracked)
+*.png
